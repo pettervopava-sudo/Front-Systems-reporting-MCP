@@ -1,91 +1,129 @@
 # API Discovery Notes
 
 **Spike run:** 2026-08-10
-**Status:** Blocked — gateway base URL not yet established
+**Status:** Connected. Sales and stock data reachable. Several API traps identified.
 
-## Summary
+## Connection
 
-The documented Front Systems API (the one the supplied keys belong to) could not
-be reached, because its gateway hostname is not publicly discoverable. A
-different, unrelated Front Systems API *was* found and mapped. No sales data was
-retrieved.
+| Item | Value |
+|---|---|
+| Base URL | `https://frontsystemsapis.frontsystems.no` |
+| Auth | `Ocp-Apim-Subscription-Key` + `x-api-key` headers — **confirmed working** |
+| Protocol | OData **v3** (`odata.metadata` in responses; `datetime'...'` literals) |
+| Backend | `fsapiv3.azurewebsites.net` |
 
-## Confirmed findings
+`api.frontsystems.no` is a *different*, legacy partner API (KTKApi) where these
+keys return 401. Ignore it. Notes on it retained at the end of this file.
 
-### 1. `api.frontsystems.no` is a legacy partner API, not the documented one
+## Entity sets
 
-- Serves an ASP.NET application; backend identifies itself as
-  `fsapiv3.azurewebsites.net`.
-- Publishes a full Swagger 2.0 definition, unauthenticated, at
-  `https://api.frontsystems.no/swagger/docs/v1` (~42 KB, titled **"KTKApi"**).
-- 66 endpoints across these groups:
+`$metadata` and the service root both return 404 through the gateway, so the
+catalog cannot be enumerated. Found by probing:
 
-  | Group | Count | Purpose |
-  |---|---|---|
-  | Stockcount | 27 | Stock-counting application |
-  | ProductTransfer | 20 | Inter-store transfers, deliveries, orders |
-  | Miinto V1–V5 | 9 | Marketplace product feeds |
-  | Google feeds | 2 | Local inventory / product feeds |
-  | MendoApi | 2 | `Day`, `LastDay` — partner push |
-  | WebSale | 2 | `GetWebSales`, `PickWeborder` |
-  | Other | 4 | FrontOPS, version, Sensorline |
+| Entity set | Notes |
+|---|---|
+| `Saleslines` | **Primary reporting source.** Line-level sales, ~70 fields |
+| `Sales` | Sale headers: `SALEID`, `SaleDate`, `Total`, `STOREID_FK`, void/test flags |
+| `Stockstatus` | Point-in-time stock; requires `snapshotDateTime` |
+| `Stockmovements` | Stock flow |
+| `Products` | Catalog (slow: ~15 s for `$top=1`) |
 
-- **The supplied keys return HTTP 401 here** (tested against
-  `/api/Stockcount/GetStocks`, which requires no parameters). Empty response body.
-- `securityDefinitions` is absent from its Swagger, so its auth scheme is
-  undocumented — but it is evidently not the two-header scheme in the developer
-  portal docs.
-- **No general sales or turnover endpoint exists on this API.** `WebSale` covers
-  web orders only. `MendoApi/Day` requires a `postUrl` parameter, meaning it
-  *pushes* data to a caller-supplied URL rather than returning it — not a usable
-  pull, and not something to invoke without deliberate intent.
+Confirmed **absent**: `Stores`, `Store`, `Customers`, `Orders`, `Turnover`,
+`Settlements`, `Transactions`, `Receipts`, `WebSales`, `Salesstatistics`.
+There is **no store dimension endpoint** — store names come from `Saleslines`.
 
-Conclusion: this API is out of scope for reporting.
+## Traps — read before writing any query
 
-### 2. TLS interception is present in the local environment
+These caused wrong answers during the spike. Each fails **silently**, returning
+an empty result set with HTTP 200 rather than an error.
 
-Python's `urllib` fails with `CERTIFICATE_VERIFY_FAILED` (self-signed cert in
-chain) against these hosts; `curl` succeeds and reports `SSL certificate verify
-ok` with a legitimate DigiCert/GeoTrust issuer.
+### 1. A `SaleDate` filter is mandatory
 
-Implication for implementation: the HTTP client must use the system trust store
-(e.g. `certifi` explicitly, or `truststore`). **Verification must not be
-disabled** — credentials would be exposed to the intercepting proxy.
+A filter on any other field returns **zero rows unless combined with a
+`SaleDate` predicate**.
 
-### 3. Hosting topology
+```
+$filter=STOCKID_FK eq 3229                                    -> 0 rows    (WRONG)
+$filter=STOCKID_FK eq 3229 and SaleDate ge datetime'...'      -> 521 rows  (correct)
+```
 
-`developer.frontsystems.com` and `api.frontsystems.no` resolve to the *same*
-Azure Front Door endpoint (`frontsystems-g9g5ctabdzanf6d2.z01.azurefd.net`),
-so routing is by host plus path. `portal.frontsystems.no` is a separate App
-Service (`keystone-portal.azurewebsites.net`).
+### 2. `$orderby` without a date filter is unreliable
 
-### 4. Gateway hostname not found
+`$orderby=SaleDateTime desc` with no date filter reported the newest sale as
+2026-08-01, while a date-filtered query proved sales existed through 2026-08-05.
+**Never determine recency without a date filter.**
 
-No DNS record exists for any of: `api.frontsystems.com`, `apim.frontsystems.com`,
-`frontsystems.azure-api.net`, `fsapi.azure-api.net`, `front-systems.azure-api.net`,
-`fs-api.azure-api.net`, `api2.frontsystems.no`, `api.frontsystems.se`.
+### 3. `substringof()` is not supported and returns empty
 
-The developer portal homepage contains no gateway reference in its HTML, and its
-API catalog requires sign-in.
+```
+$filter=substringof('Paleet',Stock)   -> 0 rows, despite Stock='Høyer Paleet'
+```
 
-Documented paths (`/api/Stores`, `/api/stock/adjust`, `/api/WebhooksEvents`) all
-return 404 on both reachable hosts, under several routing prefixes.
+No error is raised. Avoid all OData string functions; verify any operator before
+relying on it.
 
-## Unresolved — blocking
+### 4. Joined display fields are not filterable
 
-1. **Gateway base URL for the documented API.** Must be read from the API details
-   page in the developer portal while signed in. Every other question depends on
-   this.
-2. **Whether the supplied keys authenticate at all.** No authenticated request
-   has yet returned 2xx, so the credentials remain unverified.
-3. **Whether historical sales are pullable.** The vendor's documentation
-   emphasises webhook push (`SaleCreated`). The design risk noted in the spec —
-   that sales may be push-only with no historical pull — is still open, and is
-   the single most important thing to settle next.
-4. Pagination mechanism, rate limits, OData support, and history depth — all
-   still unknown.
+`Stock`, `Store`, `Brand`, `Name` appear in output but filtering on them returns
+empty — even with exact `eq` and a date filter. **Filter on numeric FK columns
+only** (`STOCKID_FK`, `STOREID_FK`, `PRODUCTID_FK`).
 
-## Next step
+Consequence for the MCP server: it must resolve store *names* to IDs itself, by
+sampling `Saleslines` over a date window and building a name→ID map. Store
+filtering cannot be pushed to the API by name.
 
-Obtain the base URL from the developer portal, set `FRONT_SYSTEMS_BASE_URL`, and
-re-run the spike starting with a store listing.
+### 5. `Saleslines` embeds customer PII
+
+Every row carries `FirstName`, `LastName`, `Email`, `Phone`, `Address`,
+`PostalCode`, `City`. **Always pass `$select`** limited to the fields a report
+needs, so personal data is neither transferred nor placed into model context.
+This is a GDPR-relevant default, not an optimisation.
+
+## Field semantics
+
+- `Price` is the **net line amount** after discount: confirmed
+  `Price = FullPrice - Discount` (e.g. FullPrice 79.00, Discount 79.00, Price 0.00).
+  Revenue = `SUM(Price)`. `VATPercent` is carried separately.
+- `Qty` was `1` on every row sampled at Paleet in August.
+- `IsVoided` must be excluded from totals. `Sales` also has `IsTest`, `IsFailed`,
+  `IsComplete` — semantics not yet verified for `Saleslines`.
+- `Currency` present per line (NOK observed). Group by it; never sum across.
+
+## Store identification
+
+Three distinct concepts, easily conflated:
+
+- `Stock` — physical/logical stock location, e.g. `Høyer Paleet`
+- `Store` — legal entity, e.g. `HC Paleet AS`
+- `STOREID_FK` — register/POS-level id; **several map to one stock**
+  (3530, 3568, 3529, 3431 all → stock 3229)
+
+**Høyer Paleet = `STOCKID_FK` 3229** (matches `Stockid` in `Stockstatus`).
+`BMB Paleet` is an unrelated store (`STOCKID_FK` 1333) — do not conflate.
+
+Roughly 20+ stocks are visible, including Sørlandssenteret, Arendal, Trondheim,
+Grimstad, Strømmen, Sandefjord, Bodø, Sjølyst, Solsiden, Storo, Gulskogen,
+Stadionparken, Kvadrat, Harstad, Haugesund, Byporten, Online.
+
+## Data freshness
+
+**The sales feed ends 2026-08-05 12:30:08.** Date-filtered queries for
+`SaleDate >= 2026-08-06` return zero rows for Paleet *and for every store*.
+Cause unknown — stalled sync, or a lag inherent to this dataset. Worth
+establishing before anyone relies on "today" figures.
+
+## Environment
+
+Local TLS interception is present: Python `urllib` fails
+`CERTIFICATE_VERIFY_FAILED` where `curl` verifies a valid DigiCert chain
+successfully. The client must use the system trust store (`truststore` or
+`certifi`). **Do not disable verification** — that would expose credentials.
+
+Performance observed: `Saleslines` with a date filter and `$select`, ~500–2000
+rows, returns in 1–3 s. `Products` is slow (~15 s).
+
+## Appendix — legacy `api.frontsystems.no`
+
+Separate API titled "KTKApi", public Swagger at `/swagger/docs/v1`, 66 endpoints
+(Stockcount 27, ProductTransfer 20, Miinto feeds 9, Google feeds 2, MendoApi 2,
+WebSale 2). Supplied keys return 401. No general sales endpoint. Out of scope.
