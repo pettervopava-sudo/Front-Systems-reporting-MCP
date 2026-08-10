@@ -2,6 +2,9 @@
 .env.*
 !.env.example
 
+# Machine-local Claude Code state; a shared .claude/settings.json may be committed
+.claude/settings.local.json
+
 __pycache__/
 *.py[cod]
 .venv/
