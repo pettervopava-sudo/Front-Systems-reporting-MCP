@@ -2,7 +2,7 @@ import httpx
 import pytest
 import respx
 from front_systems_mcp.client import (
-    ApiError, AuthError, FrontSystemsClient, RateLimitedError,
+    MAX_ATTEMPTS, MAX_RETRY_AFTER, ApiError, AuthError, FrontSystemsClient, RateLimitedError,
 )
 from front_systems_mcp.config import Config
 
@@ -96,3 +96,48 @@ async def test_unsafe_filter_is_rejected_before_any_request(client):
     with pytest.raises(UnsafeQueryError):
         await client.fetch("Sales", ["Store eq 1"], ["SALEID"])
     assert route.call_count == 0
+
+
+@respx.mock
+async def test_retry_after_is_clamped_to_the_maximum(client, monkeypatch):
+    slept: list[float] = []
+
+    async def fake_sleep(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr("front_systems_mcp.client.asyncio.sleep", fake_sleep)
+    respx.get(URL).mock(return_value=httpx.Response(429, headers={"Retry-After": "100000"}))
+    with pytest.raises(RateLimitedError):
+        await client.fetch("Sales", ["STOREID_FK eq 1"], ["SALEID"])
+    assert slept, "expected at least one backoff"
+    assert max(slept) <= MAX_RETRY_AFTER
+    assert sum(slept) <= MAX_RETRY_AFTER * MAX_ATTEMPTS
+
+
+@respx.mock
+async def test_negative_retry_after_does_not_sleep_negatively(client, monkeypatch):
+    slept: list[float] = []
+
+    async def fake_sleep(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr("front_systems_mcp.client.asyncio.sleep", fake_sleep)
+    respx.get(URL).mock(return_value=httpx.Response(429, headers={"Retry-After": "-5"}))
+    with pytest.raises(RateLimitedError):
+        await client.fetch("Sales", ["STOREID_FK eq 1"], ["SALEID"])
+    assert all(s >= 0 for s in slept)
+
+
+@respx.mock
+async def test_no_sleep_after_the_final_attempt(client, monkeypatch):
+    slept: list[float] = []
+
+    async def fake_sleep(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr("front_systems_mcp.client.asyncio.sleep", fake_sleep)
+    route = respx.get(URL).mock(return_value=httpx.Response(500))
+    with pytest.raises(ApiError):
+        await client.fetch("Sales", ["STOREID_FK eq 1"], ["SALEID"])
+    assert route.call_count == MAX_ATTEMPTS
+    assert len(slept) == MAX_ATTEMPTS - 1, "the doomed final attempt must not sleep"

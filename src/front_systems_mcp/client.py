@@ -17,6 +17,10 @@ from .odata import build_params
 
 MAX_ATTEMPTS = 4
 BACKOFF_BASE = 0.5
+MAX_RETRY_AFTER = 30.0
+#: Retry-After is upstream-controlled input. This client backs an interactive MCP
+#: tool call, so an honest-but-large value is as unhelpful as a hostile one:
+#: better to give up and report rate limiting than to stall the caller.
 
 
 class ApiError(Exception):
@@ -64,13 +68,15 @@ class FrontSystemsClient:
         for attempt in range(MAX_ATTEMPTS):
             try:
                 response = await self._http.get(url, params=params)
-            except httpx.TimeoutException as exc:
+            except httpx.TimeoutException:
                 last = ApiError(f"{entity}: request timed out.")
-                await self._sleep(attempt)
+                if attempt < MAX_ATTEMPTS - 1:
+                    await self._sleep(attempt)
                 continue
             except httpx.TransportError as exc:
                 last = ApiError(f"{entity}: network error ({type(exc).__name__}).")
-                await self._sleep(attempt)
+                if attempt < MAX_ATTEMPTS - 1:
+                    await self._sleep(attempt)
                 continue
 
             if response.status_code in (401, 403):
@@ -81,11 +87,13 @@ class FrontSystemsClient:
                 )
             if response.status_code == 429:
                 last = RateLimitedError(f"{entity}: rate limited.")
-                await self._sleep(attempt, response.headers.get("Retry-After"))
+                if attempt < MAX_ATTEMPTS - 1:
+                    await self._sleep(attempt, response.headers.get("Retry-After"))
                 continue
             if response.status_code >= 500:
                 last = ApiError(f"{entity}: server error {response.status_code}.")
-                await self._sleep(attempt)
+                if attempt < MAX_ATTEMPTS - 1:
+                    await self._sleep(attempt)
                 continue
             if response.status_code != 200:
                 raise ApiError(f"{entity}: unexpected HTTP {response.status_code}.")
@@ -116,8 +124,10 @@ class FrontSystemsClient:
     async def _sleep(attempt: int, retry_after: str | None = None) -> None:
         if retry_after is not None:
             try:
-                await asyncio.sleep(float(retry_after))
+                seconds = float(retry_after)
+                await asyncio.sleep(max(0.0, min(seconds, MAX_RETRY_AFTER)))
                 return
             except ValueError:
                 pass
-        await asyncio.sleep(BACKOFF_BASE * (2 ** attempt))
+        backoff = BACKOFF_BASE * (2 ** attempt)
+        await asyncio.sleep(min(backoff, MAX_RETRY_AFTER))
