@@ -34,37 +34,39 @@ Confirmed from the public developer portal:
   `StockMovementCreated`, `POSSettlementCreated`, and others). REST pull endpoints
   exist but the public catalog requires portal sign-in to enumerate.
 
-### Open questions, resolved by the discovery spike
+## Phase 0 — Discovery spike: COMPLETE
 
-The full endpoint catalog is behind authentication, so the following are unknown
-at design time and MUST be established before implementation:
+Run 2026-08-10/11. Full findings in [`docs/api-discovery.md`](../../api-discovery.md).
+Headlines that change this design:
 
-1. Exact paths for sales and stock retrieval.
-2. Whether sales are available **pre-aggregated** or only as line items.
-3. Pagination mechanism (page/offset, cursor, or `Link` header).
-4. Rate limits and whether `Retry-After` is returned on 429.
-5. How far back historical data is queryable.
-6. Whether store, currency, and product metadata arrive inline or need separate lookups.
+1. **Base URL is `https://frontsystemsapis.frontsystems.no`**, OData v3. Both
+   keys authenticate. The webhook-push risk did not materialise — sales are
+   pullable.
+2. **Two tables, different history.** `Sales` (headers) reaches back to 2022 and
+   earlier. `Saleslines` (line items) holds **nothing before 2026-08-01**. So
+   product, unit, discount and margin breakdowns are impossible for earlier
+   periods; only revenue, transaction count and basket size are.
+3. **Revenue is `Qty * Price`.** `Price` is a *unit* price and returns are rows
+   with `Qty = -1` and a positive `Price`. `SUM(Price)` overstates any period
+   containing returns by twice their value. Verified: `SUM(Qty * Price)` matches
+   `Sales.Total` to 0.00 across an eight-day overlap.
+4. **`$top` is applied BEFORE `$filter`** — it caps rows *scanned*. A small
+   `$top` silently returns a partial result that looks complete. `$skip` paging
+   therefore cannot be made consistent and must not be used.
+5. **Only numeric FK columns are filterable.** `Stock`, `Store`, `Brand`, `Name`
+   are joined display fields; filtering on them returns empty with HTTP 200.
+6. **There is no store dimension endpoint.** The name → id map must be harvested
+   from `Saleslines`, which means it can only cover stores trading since
+   2026-08-01.
+7. **`Saleslines` carries customer PII on every row**, so `$select` is mandatory.
 
-**Risk:** if historical sales turn out to be webhook-push-only with no meaningful
-pull endpoint, the reporting model changes materially and this design must be
-revisited before further work. The spike exists to surface that early.
+Every one of these fails *silently* — HTTP 200 with an empty or truncated array,
+never an error. That single characteristic is the dominant design constraint:
+the client's job is less about fetching than about refusing to return a plausible
+wrong answer.
 
-## Phase 0 — Discovery spike
-
-A throwaway script, run against the live API with real keys, that records into
-`docs/api-discovery.md`:
-
-- Every relevant endpoint path, method, and parameter set
-- Real sample response payloads (with any customer PII scrubbed)
-- Pagination behavior observed across a multi-page fetch
-- Observed rate-limit headers and 429 behavior
-- Answers to each open question above
-
-The captured payloads become the test fixtures for all later work, so tests
-exercise shapes the API genuinely returns rather than shapes we assumed.
-
-The spike is exploratory code and is not retained as production code.
+Real payloads captured during the spike become the test fixtures, so tests
+exercise shapes the API genuinely returns.
 
 ## Architecture
 
@@ -132,8 +134,15 @@ supply aggregation, Excel export, and charting with little custom code.
 ## Tool surface
 
 ### `list_stores()`
-Returns store IDs and names. Enables resolving "the Oslo store" to an ID.
-Cached for the session.
+Returns stock ids, stock names, legal entities and their register ids. Because
+no store dimension endpoint exists, this is **harvested from `Saleslines`** over
+a recent window and cached for the session.
+
+Two traps it must handle: several `STOREID_FK` registers map to one
+`STOCKID_FK`, so grouping by register splits one shop into four; and
+similarly-named stores can be unrelated companies (`Høyer Paleet` 3229 vs
+`BMB Paleet` 1333). The tool returns both ids and both names so the model can
+disambiguate rather than guess.
 
 ### `sales_report(date_from, date_to, group_by, stores=None, output="summary")`
 - `date_from`, `date_to` — ISO dates (`YYYY-MM-DD`), inclusive
@@ -176,9 +185,29 @@ produced rather than only reporting a file path.
 span NOK/SEK/EUR, a blind total is silently wrong. Reports group by currency and
 label it.
 
-**A partial fetch is never presented as a complete report.** If any page of a
-paginated fetch fails after retries, the tool raises an error. It does not return
-a short total. Silently wrong numbers are worse than visible failure.
+**A partial fetch is never presented as a complete report.** Silently wrong
+numbers are worse than visible failure.
+
+**Revenue is always `Qty * Price`; COGS `Qty * Cost`; margin the difference.**
+This lives in one place in `reports/`, never re-derived at a call site, because
+the failure is invisible — a period with no returns looks identical either way,
+and only a period *with* returns is wrong.
+
+**The client refuses queries it knows to be unsafe**, rather than trusting the
+caller:
+
+- a `Saleslines` query with no `SaleDate` predicate, or one reaching before
+  2026-08-01, is rejected with an explanation pointing at `Sales`
+- `$top` is fixed high (200000+) and `$skip` is never emitted
+- filters may only reference the numeric FK whitelist; a display-field filter is
+  a programming error, raised at build time
+- a row count suspiciously equal to a round `$top`-derived figure is treated as
+  probable truncation and surfaced
+
+**Coverage is reported alongside every result** — the period actually returned,
+the distinct days present, and any requested-but-missing span. A closed Sunday
+and a broken query both produce zero rows; only the caller can tell them apart,
+and only if we show them.
 
 ## Configuration and secrets
 
