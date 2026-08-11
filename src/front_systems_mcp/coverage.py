@@ -43,10 +43,16 @@ def describe(
     date_field: str = "SaleDate",
     entity: str = "Sales",
 ) -> Coverage:
-    seen = sorted({
-        dt.date.fromisoformat(str(r[date_field])[:10])
-        for r in rows if r.get(date_field)
-    })
+    seen = []
+    unreadable_count = 0
+    for r in rows:
+        if r.get(date_field):
+            try:
+                date = dt.date.fromisoformat(str(r[date_field])[:10])
+                seen.append(date)
+            except ValueError:
+                unreadable_count += 1
+    seen = sorted(set(seen))
     span = [
         requested_from + dt.timedelta(days=i)
         for i in range((requested_to - requested_from).days)
@@ -54,22 +60,34 @@ def describe(
     missing = [d for d in span if d not in set(seen)]
     warnings: list[str] = []
 
-    if entity == "Saleslines" and requested_from < LINES_HISTORY_START:
+    if entity.casefold() == "saleslines" and requested_from < LINES_HISTORY_START:
         warnings.append(
             f"Saleslines holds no data before {LINES_HISTORY_START}; "
             f"{requested_from} was requested. Use Sales for earlier periods "
             "(revenue and transaction counts, but no product, unit or margin "
             "detail)."
         )
+    if unreadable_count > 0:
+        warnings.append(
+            f"{unreadable_count} row(s) had an unreadable {date_field} and "
+            "were excluded from the coverage span."
+        )
     if not rows:
         warnings.append(
-            "0 rows returned. On this API that is more often a malformed query "
-            "than an absence of trade — check the date predicate and that only "
-            "numeric FK columns were filtered."
+            "0 rows returned. This could indicate a closed period, a time range "
+            "before the data starts, or a malformed query — check the date "
+            "predicate and that only numeric FK columns were filtered."
         )
     elif seen and seen[0] > requested_from:
         warnings.append(
             f"Earliest data {seen[0]} is later than requested {requested_from}."
+        )
+    if seen and seen[-1] < requested_to - dt.timedelta(days=1):
+        warnings.append(
+            f"Latest data {seen[-1]} is earlier than {requested_to - dt.timedelta(days=1)} "
+            "(the last day of the requested range). A short data span is common when "
+            "scan results are truncated; check that the query is not constrained by "
+            "an unintended limit."
         )
 
     return Coverage(
