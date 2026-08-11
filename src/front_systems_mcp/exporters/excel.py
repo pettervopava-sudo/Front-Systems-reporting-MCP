@@ -21,6 +21,18 @@ def write_workbook(
     openpyxl writes formulas with no cached value, so a formula cell reads as
     None until Excel opens the file.
     """
+    # Check for sheet-name collisions: two distinct names truncating to the same
+    # 31 characters would silently overwrite each other.
+    truncated_names = {}
+    for name in frames.keys():
+        truncated = name[:31]
+        if truncated in truncated_names and truncated_names[truncated] != name:
+            raise ValueError(
+                f"Sheet-name collision: '{truncated_names[truncated]}' and '{name}' "
+                f"both truncate to '{truncated}' (Excel limit: 31 characters)"
+            )
+        truncated_names[truncated] = name
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(path, engine="openpyxl") as writer:

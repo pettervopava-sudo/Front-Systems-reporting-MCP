@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 from openpyxl import load_workbook
 from front_systems_mcp.exporters.charts import write_bar_chart
@@ -31,9 +32,40 @@ def test_notes_sheet_records_assumptions(tmp_path):
     assert "Qty * Price" in text
 
 
-def test_chart_file_is_created_and_non_trivial(tmp_path):
-    path = write_bar_chart(frame(), "day", "revenue", "Revenue", tmp_path / "c.png")
-    assert path.exists() and path.stat().st_size > 1000
+def test_chart_content_reflects_the_data(tmp_path):
+    # A size floor cannot distinguish a drawn chart from a blank canvas — a blank
+    # canvas is actually larger. Assert instead that changing the data changes the
+    # output, which a no-op renderer could not satisfy.
+    a = write_bar_chart(pd.DataFrame({"day": ["x", "y"], "revenue": [100.0, 250.0]}),
+                        "day", "revenue", "A", tmp_path / "a.png")
+    b = write_bar_chart(pd.DataFrame({"day": ["x", "y"], "revenue": [1.0, 2.0]}),
+                        "day", "revenue", "A", tmp_path / "b.png")
+    assert a.read_bytes() != b.read_bytes()
+
+
+def test_missing_column_raises_and_leaks_no_figure(tmp_path):
+    import matplotlib.pyplot as plt
+    before = len(plt.get_fignums())
+    with pytest.raises(ValueError) as exc:
+        write_bar_chart(pd.DataFrame({"day": ["x"], "revenue": [1.0]}),
+                        "day", "nope", "T", tmp_path / "c.png")
+    assert "nope" in str(exc.value)
+    assert len(plt.get_fignums()) == before, "a failed render must not leak a figure"
+
+
+def test_non_numeric_y_raises_rather_than_drawing_nothing(tmp_path):
+    with pytest.raises(ValueError):
+        write_bar_chart(pd.DataFrame({"day": ["x"], "revenue": ["not-a-number"]}),
+                        "day", "revenue", "T", tmp_path / "d.png")
+
+
+def test_colliding_sheet_names_are_refused(tmp_path):
+    long_a = "Daily revenue by store and brand AAAA"
+    long_b = "Daily revenue by store and brand BBBB"
+    assert long_a[:31] == long_b[:31]
+    with pytest.raises(ValueError) as exc:
+        write_workbook({long_a: frame(), long_b: frame()}, tmp_path / "x.xlsx")
+    assert long_a[:31] in str(exc.value)
 
 
 def test_empty_frame_still_produces_a_readable_workbook(tmp_path):
