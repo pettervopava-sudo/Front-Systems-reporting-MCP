@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
-from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -17,9 +16,13 @@ from .exporters.excel import write_workbook
 
 TOOL_NAMES = ("list_stores", "sales_report", "stock_report", "raw_query")
 
+MAX_TABLE_ROWS = 100
+#: Aggregation happens in code so that context cost does not scale with the date
+#: range. Emitting an unbounded frame would undo that, so wide results are
+#: truncated here and the full data offered as a file instead.
+
 mcp = FastMCP("front-systems")
 _client: FrontSystemsClient | None = None
-_store_cache: list[stores_mod.StoreEntry] | None = None
 
 
 def parse_date(value: str) -> dt.date:
@@ -54,7 +57,17 @@ def format_result(result: "sales_report_mod.SalesResult") -> str:
                      else f"{key}: {value:,}")
     if not result.frame.empty:
         lines.append("")
-        lines.append(result.frame.to_string(index=False))
+        total_rows = len(result.frame)
+        if total_rows > MAX_TABLE_ROWS:
+            lines.append(result.frame.head(MAX_TABLE_ROWS).to_string(index=False))
+            lines.append("")
+            lines.append(
+                f"(showing {MAX_TABLE_ROWS} of {total_rows} rows) Narrow the date "
+                "range, group more coarsely, or request output=[\"excel\"] for the "
+                "complete data."
+            )
+        else:
+            lines.append(result.frame.to_string(index=False))
     return "\n".join(lines)
 
 
@@ -64,12 +77,11 @@ async def list_stores(days: int = 30) -> str:
 
     Harvested from recent sales lines, because the API has no store endpoint.
     """
-    global _store_cache
-    _store_cache = await stores_mod.harvest(get_client(), days=days)
+    entries = await stores_mod.harvest(get_client(), days=days)
     rows = [
         f"{e.stock_id:>7}  {e.display_name:<34} "
         f"{'/'.join(e.legal_entities):<32} registers={e.register_ids}"
-        for e in _store_cache
+        for e in entries
     ]
     return "STOCKID  stock name                         legal entity\n" + "\n".join(rows)
 
@@ -136,7 +148,10 @@ async def stock_report(
         search=search, low_stock_threshold=low_stock_threshold)
     if frame.empty:
         return "No stock rows matched."
-    return f"{len(frame)} rows\n\n{frame.head(200).to_string(index=False)}"
+    total = len(frame)
+    shown = frame.head(200)
+    note = f" (showing {len(shown)} of {total} rows)" if total > 200 else ""
+    return f"{total} rows{note}\n\n{shown.to_string(index=False)}"
 
 
 @mcp.tool()

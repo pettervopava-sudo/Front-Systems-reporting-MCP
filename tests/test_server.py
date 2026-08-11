@@ -59,3 +59,61 @@ def test_every_registered_tool_is_read_only():
         w in n for n in names
         for w in ("create", "update", "delete", "insert", "post", "adjust")
     )
+
+
+def test_wide_frames_are_truncated_with_the_true_total_shown():
+    import pandas as pd
+    from front_systems_mcp.coverage import describe
+    from front_systems_mcp.reports.sales import SalesResult
+
+    frame = pd.DataFrame({
+        "product": [f"P{i}" for i in range(5000)],
+        "Currency": ["NOK"] * 5000,
+        "revenue": [1.0] * 5000,
+    })
+    result = SalesResult(
+        frame=frame,
+        totals={"revenue": 5000.0, "transactions": 5000},
+        coverage=describe([], dt.date(2026, 8, 1), dt.date(2026, 8, 2), entity="Sales"),
+        source="Sales",
+    )
+    text = server.format_result(result)
+    assert len(text) < 50_000, "an unbounded dump would flood the caller's context"
+    assert "5000" in text, "the true row count must still be reported"
+    assert "excel" in text.lower(), "the caller needs a route to the full data"
+
+
+def test_small_frames_are_not_truncated():
+    import pandas as pd
+    from front_systems_mcp.coverage import describe
+    from front_systems_mcp.reports.sales import SalesResult
+
+    frame = pd.DataFrame({"day": ["2026-08-01"], "Currency": ["NOK"], "revenue": [100.0]})
+    result = SalesResult(
+        frame=frame,
+        totals={"revenue": 100.0, "transactions": 1},
+        coverage=describe([], dt.date(2026, 8, 1), dt.date(2026, 8, 2), entity="Sales"),
+        source="Sales",
+    )
+    text = server.format_result(result)
+    assert "2026-08-01" in text
+    assert "showing" not in text.lower()
+
+
+def test_truncation_never_drops_the_warnings():
+    import pandas as pd
+    from front_systems_mcp.coverage import describe
+    from front_systems_mcp.reports.sales import SalesResult
+
+    frame = pd.DataFrame({
+        "product": [f"P{i}" for i in range(5000)],
+        "Currency": ["NOK"] * 5000,
+        "revenue": [1.0] * 5000,
+    })
+    coverage = describe([], dt.date(2026, 7, 1), dt.date(2026, 8, 1), entity="Saleslines")
+    result = SalesResult(frame=frame, totals={"revenue": 0.0, "transactions": 0},
+                         coverage=coverage, source="Saleslines")
+    text = server.format_result(result)
+    assert coverage.warnings, "fixture precondition: this case must produce warnings"
+    for warning in coverage.warnings:
+        assert warning[:40] in text, "warnings must survive truncation"
