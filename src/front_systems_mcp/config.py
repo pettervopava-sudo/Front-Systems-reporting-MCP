@@ -38,14 +38,17 @@ def load_config(env_path: Path | None = None) -> Config:
         raise ConfigError(
             f"No .env at {path}. It must define: {', '.join(REQUIRED)}."
         )
-    values = dotenv_values(path, encoding="utf-8-sig")
+    raw_values = dotenv_values(path, encoding="utf-8-sig")
+    values = {
+        k: str(v).strip() if v is not None else "" for k, v in raw_values.items()
+    }
     missing = [k for k in REQUIRED if not values.get(k, "").strip()]
     if missing:
         raise ConfigError(
             f"Missing or blank in {path}: {', '.join(missing)}."
         )
     return Config(
-        base_url=values["FRONT_SYSTEMS_BASE_URL"].strip().rstrip("/"),
-        subscription_key=values["FRONT_SYSTEMS_SUBSCRIPTION_KEY"].strip(),
-        api_key=values["FRONT_SYSTEMS_API_KEY"].strip(),
+        base_url=values["FRONT_SYSTEMS_BASE_URL"].rstrip("/"),
+        subscription_key=values["FRONT_SYSTEMS_SUBSCRIPTION_KEY"],
+        api_key=values["FRONT_SYSTEMS_API_KEY"],
     )

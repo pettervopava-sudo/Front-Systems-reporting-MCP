@@ -95,3 +95,15 @@ def test_missing_file_names_the_path_and_the_variables(tmp_path):
     message = str(exc.value)
     assert "nope.env" in message
     assert "FRONT_SYSTEMS_API_KEY" in message
+
+
+def test_bare_key_without_equals_is_reported_missing_not_crash(tmp_path):
+    p = tmp_path / ".env"
+    p.write_text(
+        "FRONT_SYSTEMS_BASE_URL=https://example.test\n"
+        "FRONT_SYSTEMS_SUBSCRIPTION_KEY=sub123\n"
+        "FRONT_SYSTEMS_API_KEY\n"
+    )
+    with pytest.raises(ConfigError) as exc:
+        load_config(p)
+    assert "FRONT_SYSTEMS_API_KEY" in str(exc.value)
