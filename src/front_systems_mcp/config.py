@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 REQUIRED = (
     "FRONT_SYSTEMS_BASE_URL",
     "FRONT_SYSTEMS_SUBSCRIPTION_KEY",
@@ -30,24 +32,13 @@ class Config:
         return f"Config(base_url={self.base_url!r}, keys=<redacted>)"
 
 
-def _parse(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        values[key.strip()] = value.strip()
-    return values
-
-
 def load_config(env_path: Path | None = None) -> Config:
     path = Path(env_path) if env_path else Path.cwd() / ".env"
     if not path.exists():
         raise ConfigError(
             f"No .env at {path}. It must define: {', '.join(REQUIRED)}."
         )
-    values = _parse(path)
+    values = dotenv_values(path, encoding="utf-8-sig")
     missing = [k for k in REQUIRED if not values.get(k, "").strip()]
     if missing:
         raise ConfigError(

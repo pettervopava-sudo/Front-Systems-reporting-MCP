@@ -53,3 +53,45 @@ def test_secrets_never_appear_in_repr(tmp_path):
     rendered = f"{cfg!r} {cfg!s}"
     assert "supersecretsub" not in rendered
     assert "supersecretapi" not in rendered
+
+
+def test_double_and_single_quoted_values_are_unquoted(tmp_path):
+    p = tmp_path / ".env"
+    p.write_text(
+        'FRONT_SYSTEMS_BASE_URL="https://example.test"\n'
+        "FRONT_SYSTEMS_SUBSCRIPTION_KEY='sub123'\n"
+        'FRONT_SYSTEMS_API_KEY=api456\n'
+    )
+    cfg = load_config(p)
+    assert cfg.base_url == "https://example.test"
+    assert cfg.subscription_key == "sub123"
+    assert cfg.api_key == "api456"
+
+
+def test_utf8_bom_does_not_hide_the_first_variable(tmp_path):
+    p = tmp_path / ".env"
+    p.write_text(
+        "FRONT_SYSTEMS_BASE_URL=https://example.test\n"
+        "FRONT_SYSTEMS_SUBSCRIPTION_KEY=sub123\n"
+        "FRONT_SYSTEMS_API_KEY=api456\n",
+        encoding="utf-8-sig",
+    )
+    assert load_config(p).base_url == "https://example.test"
+
+
+def test_value_containing_equals_is_preserved(tmp_path):
+    p = tmp_path / ".env"
+    p.write_text(
+        "FRONT_SYSTEMS_BASE_URL=https://example.test\n"
+        "FRONT_SYSTEMS_SUBSCRIPTION_KEY=sub123\n"
+        "FRONT_SYSTEMS_API_KEY=a=b=c\n"
+    )
+    assert load_config(p).api_key == "a=b=c"
+
+
+def test_missing_file_names_the_path_and_the_variables(tmp_path):
+    with pytest.raises(ConfigError) as exc:
+        load_config(tmp_path / "nope.env")
+    message = str(exc.value)
+    assert "nope.env" in message
+    assert "FRONT_SYSTEMS_API_KEY" in message
