@@ -1,129 +1,143 @@
 # API Discovery Notes
 
-**Spike run:** 2026-08-10
-**Status:** Connected. Sales and stock data reachable. Several API traps identified.
+**Last updated:** 2026-08-11
+**Status:** Connected and mapped. Key limitation found: line-level history is very short.
+
+> This file previously stated that the sales feed ended 2026-08-05 and that
+> `$filter` on dates was unreliable. **Both claims were wrong** — artefacts of the
+> `$top` behaviour documented below. Corrected here.
 
 ## Connection
 
 | Item | Value |
 |---|---|
 | Base URL | `https://frontsystemsapis.frontsystems.no` |
-| Auth | `Ocp-Apim-Subscription-Key` + `x-api-key` headers — **confirmed working** |
-| Protocol | OData **v3** (`odata.metadata` in responses; `datetime'...'` literals) |
+| Auth | `Ocp-Apim-Subscription-Key` + `x-api-key` headers — confirmed working |
+| Protocol | OData **v3** (`datetime'...'` literals) |
 | Backend | `fsapiv3.azurewebsites.net` |
 
-`api.frontsystems.no` is a *different*, legacy partner API (KTKApi) where these
-keys return 401. Ignore it. Notes on it retained at the end of this file.
+`api.frontsystems.no` is an unrelated legacy partner API (KTKApi) that rejects
+these keys with 401. Out of scope.
 
 ## Entity sets
 
-`$metadata` and the service root both return 404 through the gateway, so the
-catalog cannot be enumerated. Found by probing:
+`$metadata` and the service root return 404 through the gateway, so the catalog
+cannot be enumerated. Found by probing; ~35 other plausible names all 404.
 
-| Entity set | Notes |
-|---|---|
-| `Saleslines` | **Primary reporting source.** Line-level sales, ~70 fields |
-| `Sales` | Sale headers: `SALEID`, `SaleDate`, `Total`, `STOREID_FK`, void/test flags |
-| `Stockstatus` | Point-in-time stock; requires `snapshotDateTime` |
-| `Stockmovements` | Stock flow |
-| `Products` | Catalog (slow: ~15 s for `$top=1`) |
+| Entity set | History available | Notes |
+|---|---|---|
+| `Sales` | **Deep** — 2022 and earlier through today | Transaction headers |
+| `Saleslines` | **2026-08-01 onward only** | Product lines; see below |
+| `Stockstatus` | point-in-time | Requires `snapshotDateTime` |
+| `Stockmovements` | n/a | Returns nothing for stock 3229 |
+| `Products` | n/a | Slow (~15 s for `$top=1`) |
 
-Confirmed **absent**: `Stores`, `Store`, `Customers`, `Orders`, `Turnover`,
-`Settlements`, `Transactions`, `Receipts`, `WebSales`, `Salesstatistics`.
-There is **no store dimension endpoint** — store names come from `Saleslines`.
+Confirmed absent: `Stores`, `Customers`, `Orders`, `Turnover`, `Settlements`,
+`Transactions`, `Receipts`, `Salesstatistics`, and every `*history` / `*archive` /
+`*lines` variant tried. **There is no store dimension endpoint.**
+
+### The critical limitation
+
+`Saleslines` contains **only 2026-08-01 onward**. Verified exhaustively: all
+stores, no stock filter, `$top=2000000` → 14,235 rows spanning 2026-08-01 to
+2026-08-11, and zero rows for any earlier date or single earlier day.
+
+It gained 2026-08-11 while these notes were being written, so it is
+**accumulating from 2026-08-01**, not a fixed-length rolling window. Line-level
+history before August 2026 appears simply not to exist in this API.
+
+**Consequence:** for any period before 2026-08-01, only transaction headers are
+available. No product, brand, size, unit, discount, or margin breakdown is
+possible for those periods. This is the single biggest constraint on the
+reporting tool and should be raised with Front Systems.
 
 ## Traps — read before writing any query
 
-These caused wrong answers during the spike. Each fails **silently**, returning
-an empty result set with HTTP 200 rather than an error.
+Each fails **silently**: HTTP 200 with an empty or truncated result, never an error.
 
-### 1. A `SaleDate` filter is mandatory
+### 1. `$top` is applied BEFORE `$filter` — the most dangerous behaviour
 
-A filter on any other field returns **zero rows unless combined with a
-`SaleDate` predicate**.
+`$top` limits rows **scanned**, not rows returned. Identical filter, varying `$top`:
 
-```
-$filter=STOCKID_FK eq 3229                                    -> 0 rows    (WRONG)
-$filter=STOCKID_FK eq 3229 and SaleDate ge datetime'...'      -> 521 rows  (correct)
-```
+| `$top` | rows returned | date span |
+|---|---|---|
+| 100 | 1 | 2026-08-01 |
+| 1000 | 112 | 2026-08-01 |
+| 5000 | 521 | 2026-08-01..08-05 |
+| 20000 | 1475 | 2026-08-01..08-10 |
 
-### 2. `$orderby` without a date filter is unreliable
+A too-small `$top` silently returns a *partial* result that looks complete. This
+caused two wrong conclusions during the spike.
 
-`$orderby=SaleDateTime desc` with no date filter reported the newest sale as
-2026-08-01, while a date-filtered query proved sales existed through 2026-08-05.
-**Never determine recency without a date filter.**
+**Rules:** always set `$top` far above the expected source volume (200000+).
+**Never page with `$skip`** — with `$top` applied pre-filter, paging cannot be
+made consistent. Treat a result whose size equals a round `$top`-derived figure
+as suspect.
 
-### 3. `substringof()` is not supported and returns empty
+### 2. `substringof()` is unsupported → returns empty
 
-```
-$filter=substringof('Paleet',Stock)   -> 0 rows, despite Stock='Høyer Paleet'
-```
+`substringof('Paleet',Stock)` → 0 rows despite `Stock = 'Høyer Paleet'`. Avoid all
+OData string functions.
 
-No error is raised. Avoid all OData string functions; verify any operator before
-relying on it.
+### 3. Joined display fields are not filterable → returns empty
 
-### 4. Joined display fields are not filterable
+`Stock`, `Store`, `Brand`, `Name` appear in output, but filtering on them returns
+nothing even with exact `eq`. **Filter only on numeric FK columns**
+(`STOCKID_FK`, `STOREID_FK`, `PRODUCTID_FK`).
 
-`Stock`, `Store`, `Brand`, `Name` appear in output but filtering on them returns
-empty — even with exact `eq` and a date filter. **Filter on numeric FK columns
-only** (`STOCKID_FK`, `STOREID_FK`, `PRODUCTID_FK`).
+Consequence: the MCP server must resolve store *names* to IDs itself, from a
+sampled name→ID map. Name filtering cannot be pushed to the API.
 
-Consequence for the MCP server: it must resolve store *names* to IDs itself, by
-sampling `Saleslines` over a date window and building a name→ID map. Store
-filtering cannot be pushed to the API by name.
+### 4. `$filter` on dates *does* work
+
+Contrary to the earlier note here: `SaleDate ge/lt datetime'...'` filters
+correctly. Apparent failures were trap #1.
 
 ### 5. `Saleslines` embeds customer PII
 
 Every row carries `FirstName`, `LastName`, `Email`, `Phone`, `Address`,
-`PostalCode`, `City`. **Always pass `$select`** limited to the fields a report
-needs, so personal data is neither transferred nor placed into model context.
-This is a GDPR-relevant default, not an optimisation.
+`PostalCode`, `City`. **Always pass `$select`** limited to needed fields. GDPR
+default, not an optimisation.
 
 ## Field semantics
 
-- `Price` is the **net line amount** after discount: confirmed
-  `Price = FullPrice - Discount` (e.g. FullPrice 79.00, Discount 79.00, Price 0.00).
-  Revenue = `SUM(Price)`. `VATPercent` is carried separately.
-- `Qty` was `1` on every row sampled at Paleet in August.
-- `IsVoided` must be excluded from totals. `Sales` also has `IsTest`, `IsFailed`,
-  `IsComplete` — semantics not yet verified for `Saleslines`.
-- `Currency` present per line (NOK observed). Group by it; never sum across.
+- `Price` is the **net line amount** after discount: `Price = FullPrice - Discount`.
+  Line revenue = `SUM(Price)`. `VATPercent` carried separately.
+- **`Sales.Total` runs 4–7% below the line-level `SUM(Price)`** over the 1–10
+  August overlap. Not a fixed ratio, so not VAT. Transaction *counts* reconcile
+  exactly. **The `Total` definition is unconfirmed — verify against Backoffice
+  before using header-derived revenue externally.**
+- `Sales` flags voided rows via `IsVoided` (631 of 3867 in July at Paleet).
+  `Saleslines` returned **zero** voided rows, so it appears to exclude them
+  rather than flag them. Do not assume symmetric void handling.
+- `Currency` per line (NOK observed). Group by it; never sum across currencies.
+- `Cost` exists on `Saleslines` (margin computable) but **not** on `Sales`.
 
 ## Store identification
 
-Three distinct concepts, easily conflated:
+Three easily-conflated concepts:
 
-- `Stock` — physical/logical stock location, e.g. `Høyer Paleet`
+- `Stock` — location, e.g. `Høyer Paleet`
 - `Store` — legal entity, e.g. `HC Paleet AS`
-- `STOREID_FK` — register/POS-level id; **several map to one stock**
-  (3530, 3568, 3529, 3431 all → stock 3229)
+- `STOREID_FK` — register/POS id; **several map to one stock**
 
-**Høyer Paleet = `STOCKID_FK` 3229** (matches `Stockid` in `Stockstatus`).
-`BMB Paleet` is an unrelated store (`STOCKID_FK` 1333) — do not conflate.
+**Høyer Paleet = `STOCKID_FK` 3229**, registers `3529, 3530, 3431, 3568`
+(derived from August line data; a register active only in an earlier period
+would not be captured). `BMB Paleet` is an unrelated store (`STOCKID_FK` 1333).
 
-Roughly 20+ stocks are visible, including Sørlandssenteret, Arendal, Trondheim,
-Grimstad, Strømmen, Sandefjord, Bodø, Sjølyst, Solsiden, Storo, Gulskogen,
-Stadionparken, Kvadrat, Harstad, Haugesund, Byporten, Online.
-
-## Data freshness
-
-**The sales feed ends 2026-08-05 12:30:08.** Date-filtered queries for
-`SaleDate >= 2026-08-06` return zero rows for Paleet *and for every store*.
-Cause unknown — stalled sync, or a lag inherent to this dataset. Worth
-establishing before anyone relies on "today" figures.
+~20 stocks visible, including Sørlandssenteret, Arendal, Trondheim, Grimstad,
+Strømmen, Sandefjord, Bodø, Sjølyst, Solsiden, Storo, Gulskogen, Stadionparken,
+Kvadrat, Harstad, Haugesund, Byporten, Online.
 
 ## Environment
 
-Local TLS interception is present: Python `urllib` fails
-`CERTIFICATE_VERIFY_FAILED` where `curl` verifies a valid DigiCert chain
-successfully. The client must use the system trust store (`truststore` or
-`certifi`). **Do not disable verification** — that would expose credentials.
+Local TLS interception: Python `urllib` fails `CERTIFICATE_VERIFY_FAILED` where
+`curl` verifies a valid DigiCert chain. The client must use the system trust
+store (`truststore`/`certifi`). **Never disable verification** — that exposes
+credentials to the proxy.
 
-Performance observed: `Saleslines` with a date filter and `$select`, ~500–2000
-rows, returns in 1–3 s. `Products` is slow (~15 s).
+LibreOffice is **not installed**, so `recalc.py` cannot verify workbook formulas
+on this machine. Either install it or compute values in Python and cross-check.
 
-## Appendix — legacy `api.frontsystems.no`
-
-Separate API titled "KTKApi", public Swagger at `/swagger/docs/v1`, 66 endpoints
-(Stockcount 27, ProductTransfer 20, Miinto feeds 9, Google feeds 2, MendoApi 2,
-WebSale 2). Supplied keys return 401. No general sales endpoint. Out of scope.
+Performance: `Saleslines` with date filter and `$select` returns 1–6 s.
+`Products` is slow (~15 s).
