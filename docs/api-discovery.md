@@ -101,12 +101,18 @@ default, not an optimisation.
 
 ## Field semantics
 
-- `Price` is the **net line amount** after discount: `Price = FullPrice - Discount`.
-  Line revenue = `SUM(Price)`. `VATPercent` carried separately.
-- **`Sales.Total` runs 4–7% below the line-level `SUM(Price)`** over the 1–10
-  August overlap. Not a fixed ratio, so not VAT. Transaction *counts* reconcile
-  exactly. **The `Total` definition is unconfirmed — verify against Backoffice
-  before using header-derived revenue externally.**
+- **`Price` is a UNIT price, not a line total.** Line revenue is
+  **`Qty * Price`**. `Price = FullPrice - Discount` per unit; `VATPercent`
+  carried separately.
+- **Returns are rows with `Qty = -1`** and a positive `Price`. Using `SUM(Price)`
+  therefore adds returns as revenue instead of subtracting them — a
+  double-counting error worth twice the return value.
+- **`Sales.Total` reconciles EXACTLY with `SUM(Qty * Price)`** — 0.00 difference
+  on all 8 days of the 1–10 August overlap, and 1,796,298.45 NOK in total. An
+  earlier note here claimed an unexplained 4–7% gap; that gap was entirely caused
+  by summing `Price` without `Qty` (25 return lines, 48,158.70 NOK, counted
+  positive rather than negative). **Both sources are trustworthy.**
+- COGS is likewise `SUM(Qty * Cost)`, and margin `SUM(Qty * (Price - Cost))`.
 - `Sales` flags voided rows via `IsVoided` (631 of 3867 in July at Paleet).
   `Saleslines` returned **zero** voided rows, so it appears to exclude them
   rather than flag them. Do not assume symmetric void handling.
