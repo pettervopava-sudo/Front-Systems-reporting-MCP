@@ -129,11 +129,27 @@ Three easily-conflated concepts:
 
 **Høyer Paleet = `STOCKID_FK` 3229**, registers `3529, 3530, 3431, 3568`
 (derived from August line data; a register active only in an earlier period
-would not be captured). `BMB Paleet` is an unrelated store (`STOCKID_FK` 1333).
+would not be captured). Resolving on the name "Paleet" turns up **three**
+unrelated stocks, not two: `Høyer Paleet` (3229), `BMB Paleet` (1333), and
+`BMB Paleet Shopify` (1901) — three separate companies trading under a
+similar name in the same mall, which is exactly the hazard this section
+warns about. Don't lean on that count of three either: it reflects whichever
+stocks happened to trade during the harvested window, not a fixed census, so
+a different window could surface a different number of matches.
 
 ~20 stocks visible, including Sørlandssenteret, Arendal, Trondheim, Grimstad,
 Strømmen, Sandefjord, Bodø, Sjølyst, Solsiden, Storo, Gulskogen, Stadionparken,
 Kvadrat, Harstad, Haugesund, Byporten, Online.
+
+## Live-verified figures (2026-08-11)
+
+The manual-investigation figures above were re-verified end to end by the
+automated live test suite (`tests/test_live.py`, `FS_LIVE=1`) against stock
+3229 (Høyer Paleet) for 2026-08-01..2026-08-11:
+
+- `SUM(Qty * Price)` and `SUM(Total)` both equal **1,796,298.45 NOK**.
+- 25 return lines, totalling **-48,158.70 NOK**.
+- **0** voided rows among 1,475 `Saleslines` rows.
 
 ## Environment
 
