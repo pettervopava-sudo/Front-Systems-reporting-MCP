@@ -561,7 +561,7 @@ git commit -m "test: capture real API payloads as fixtures, PII stripped"
   - `FrontSystemsClient(config: Config, timeout: float = 600.0)`
   - `async FrontSystemsClient.fetch(entity: str, filters: Sequence[str], select: Sequence[str]) -> list[dict]`
   - `async FrontSystemsClient.aclose() -> None`
-  - `ApiError(Exception)`, `AuthError(ApiError)`, `RateLimitedError(ApiError)`, `TruncationSuspected(ApiError)`
+  - `ApiError(Exception)`, `AuthError(ApiError)`, `RateLimitedError(ApiError)`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -675,6 +675,7 @@ consistent pages. One request per query, with $top pinned high.
 from __future__ import annotations
 
 import asyncio
+import ssl
 from collections.abc import Sequence
 
 import httpx
@@ -699,21 +700,16 @@ class RateLimitedError(ApiError):
     """Rate limited after exhausting retries."""
 
 
-class TruncationSuspected(ApiError):
-    """A result looks truncated rather than complete."""
-
-
 class FrontSystemsClient:
     def __init__(self, config: Config, timeout: float = 600.0) -> None:
         self._config = config
         # System trust store: some hosts run a TLS-intercepting proxy under
         # which Python's bundled CA bundle fails on a genuinely valid chain.
         # Disabling verification would expose the keys to the interceptor.
-        ctx = truststore.SSLContext(ssl_protocol=None) if hasattr(
-            truststore, "SSLContext") else True
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self._http = httpx.AsyncClient(
             timeout=timeout,
-            verify=ctx if ctx is not True else True,
+            verify=ctx,
             headers={
                 "Ocp-Apim-Subscription-Key": config.subscription_key,
                 "x-api-key": config.api_key,
@@ -1303,7 +1299,8 @@ async def test_report_uses_headers_for_periods_before_line_history():
     )
     assert result.source == "Sales"
     assert client.calls[0][0] == "Sales"
-    assert "no product" in result.coverage.summary().lower() or result.totals["revenue"] == 100.0
+    assert result.totals["revenue"] == 100.0
+    assert "Qty" not in result.frame.columns  # headers carry no unit data
 
 
 async def test_report_uses_lines_when_period_allows_and_stock_given():
