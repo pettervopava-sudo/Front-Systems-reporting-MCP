@@ -17,10 +17,15 @@ MAX_TOP = 2_000_000
 
 FILTERABLE = frozenset({"STOCKID_FK", "STOREID_FK", "PRODUCTID_FK", "SaleDate"})
 
-#: Regex to extract field names in comparison expressions. Defence in depth —
-#: not a parser, but sufficient to catch hand-built filters that bypass the
-#: whitelist-only helpers.
-_COMPARISON = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s+(?:eq|ne|gt|ge|lt|le)\b")
+#: Allowlist patterns for filter clause shapes. Only accept what the helper
+#: functions (eq, any_of, date_range) emit. Anything else is rejected to prevent
+#: hand-built filters that bypass the whitelist.
+_INT_CLAUSE = re.compile(r"^([A-Za-z_]\w*)\s+eq\s+-?\d+$")
+_DATE_CLAUSE = re.compile(
+    r"^([A-Za-z_]\w*)\s+(?:ge|gt|le|lt)\s+"
+    r"datetime'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'$"
+)
+_OR_GROUP = re.compile(r"^\((.+)\)$", re.S)
 
 
 class UnsafeQueryError(Exception):
@@ -83,21 +88,68 @@ def build_params(
             "$select is required. Saleslines carries customer PII on every row, "
             "so an unrestricted query moves personal data into context."
         )
-    # Validate all field names in filters to prevent hand-built filters that
-    # bypass the whitelist. Defence in depth, not a parser.
-    unsafe_fields = set()
+    # Validate filters using an allowlist of shapes that the helpers emit.
+    # Anything not matching is rejected — no hand-built filters allowed.
     for filter_str in filters:
-        for match in _COMPARISON.finditer(filter_str):
-            field = match.group(1)
+        clause = filter_str.strip()
+
+        # Try integer comparison: FIELD eq -?\d+
+        int_match = _INT_CLAUSE.match(clause)
+        if int_match:
+            field = int_match.group(1)
             if field not in FILTERABLE:
-                unsafe_fields.add(field)
-    if unsafe_fields:
+                raise UnsafeQueryError(
+                    f"{field!r} is not filterable. Display fields such as Stock, Store, "
+                    f"Brand and Name are joined columns: filtering on them returns an "
+                    f"empty result with HTTP 200 rather than an error. "
+                    f"Filter on one of: {', '.join(sorted(FILTERABLE))}."
+                )
+            continue
+
+        # Try date comparison: FIELD (ge|gt|le|lt) datetime'YYYY-MM-DDTHH:MM:SS'
+        date_match = _DATE_CLAUSE.match(clause)
+        if date_match:
+            field = date_match.group(1)
+            if field not in FILTERABLE:
+                raise UnsafeQueryError(
+                    f"{field!r} is not filterable. Display fields such as Stock, Store, "
+                    f"Brand and Name are joined columns: filtering on them returns an "
+                    f"empty result with HTTP 200 rather than an error. "
+                    f"Filter on one of: {', '.join(sorted(FILTERABLE))}."
+                )
+            continue
+
+        # Try OR group: (inner_clauses)
+        or_match = _OR_GROUP.match(clause)
+        if or_match:
+            inner = or_match.group(1)
+            # Split on " or " and validate each clause
+            parts = inner.split(" or ")
+            for part in parts:
+                part_clause = part.strip()
+                int_match = _INT_CLAUSE.match(part_clause)
+                if int_match:
+                    field = int_match.group(1)
+                    if field not in FILTERABLE:
+                        raise UnsafeQueryError(
+                            f"{field!r} is not filterable. Display fields such as Stock, "
+                            f"Store, Brand and Name are joined columns: filtering on them "
+                            f"returns an empty result with HTTP 200 rather than an error. "
+                            f"Filter on one of: {', '.join(sorted(FILTERABLE))}."
+                        )
+                else:
+                    raise UnsafeQueryError(
+                        f"Invalid clause in OR group: {part_clause!r}. "
+                        f"Filters must be built with eq, any_of, or date_range."
+                    )
+            continue
+
+        # None of the allowed shapes matched
         raise UnsafeQueryError(
-            f"{', '.join(sorted(unsafe_fields))} {'is' if len(unsafe_fields) == 1 else 'are'} "
-            f"not filterable. Display fields such as Stock, Store, Brand and Name are "
-            f"joined columns: filtering on them returns an empty result with HTTP 200 "
-            f"rather than an error. Filter on one of: {', '.join(sorted(FILTERABLE))}."
+            f"Invalid filter clause: {clause!r}. "
+            f"Filters must be built with eq, any_of, or date_range."
         )
+
     params = {"$select": ",".join(select), "$top": str(MAX_TOP)}
     if filters:
         params["$filter"] = " and ".join(filters)
