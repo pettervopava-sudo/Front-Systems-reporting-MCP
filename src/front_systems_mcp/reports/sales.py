@@ -67,7 +67,11 @@ def headers_to_frame(rows: list[dict]) -> pd.DataFrame:
         frame = frame[~frame["IsVoided"].astype(bool)].copy()
     frame["Total"] = _numeric(frame, "Total")
     frame["day"] = frame["SaleDate"].astype(str).str[:10]
-    frame["Currency"] = "NOK"  # headers carry no currency column
+    # Sales headers carry no currency column at all, so this is a placeholder,
+    # not a fact. Labelling it "NOK" would assert a currency the API never
+    # told us; "UNKNOWN" is honest. A multi-currency tenant needs the lines
+    # path (Saleslines has a real Currency column) to see a true breakdown.
+    frame["Currency"] = "UNKNOWN"
     return frame
 
 
@@ -99,6 +103,19 @@ def aggregate(frame: pd.DataFrame, group_by: Sequence[str]) -> pd.DataFrame:
                "margin", "avg_basket"]
     if frame.empty:
         return pd.DataFrame(columns=columns)
+    if "LineTotal" not in frame and "Total" not in frame:
+        # This is the last line of defence for the revenue invariant: without
+        # it, a frame built some other way than lines_to_frame/headers_to_frame
+        # silently reports 0.0 revenue, and the tempting "fix" is to point
+        # this at Price directly — which reintroduces the original returns bug
+        # (Price is a unit price; SUM(Price) double-counts returns as revenue).
+        raise ValueError(
+            "Cannot compute revenue: this frame has neither 'LineTotal' nor "
+            "'Total'. Line-level data must be built with lines_to_frame, which "
+            "computes LineTotal = Qty * Price (never sum Price directly — "
+            "returns are Qty = -1 rows with a positive Price). Header-level "
+            "data must be built with headers_to_frame, which provides Total."
+        )
     keys = [*group_by, "Currency"]
     revenue = "LineTotal" if "LineTotal" in frame else "Total"
     has_qty = "Qty" in frame
@@ -120,6 +137,25 @@ def aggregate(frame: pd.DataFrame, group_by: Sequence[str]) -> pd.DataFrame:
     return out[columns]
 
 
+def _blended_total_note(frame: pd.DataFrame) -> str | None:
+    """None if a single-currency (or currency-less) total is safe to sum.
+
+    A blended NOK+EUR total is not a smaller mistake than the returns bug this
+    project exists to catch — it is the same class of confidently wrong
+    number. When more than one currency is present, refuse to print one.
+    """
+    if "Currency" not in frame or frame.empty:
+        return None
+    currencies = sorted(str(c) for c in frame["Currency"].dropna().unique())
+    if len(currencies) <= 1:
+        return None
+    return (
+        f"multiple currencies present ({', '.join(currencies)}); a blended "
+        "total would be meaningless. See the per-currency breakdown in the "
+        "table below."
+    )
+
+
 async def sales_report(
     client,
     date_from: dt.date,
@@ -138,14 +174,24 @@ async def sales_report(
 
     if use_lines:
         filters = [*date_range("SaleDate", date_from, date_to), eq("STOCKID_FK", stock_id)]
+        if register_ids:
+            # Both constraints must hold: stock_id narrows to the shop,
+            # register_ids narrows further to specific tills within it. Dropping
+            # this clause silently widens a till-level question to shop-wide.
+            filters.append(any_of("STOREID_FK", list(register_ids)))
         rows = await client.fetch("Saleslines", filters, LINE_SELECT)
         frame = lines_to_frame(rows)
         coverage = describe(rows, date_from, date_to, entity="Saleslines")
         source = "Saleslines"
+        blended_note = _blended_total_note(frame)
         totals = {
-            "revenue": round(float(frame["LineTotal"].sum()), 2) if len(frame) else 0.0,
+            "revenue": blended_note or (
+                round(float(frame["LineTotal"].sum()), 2) if len(frame) else 0.0
+            ),
             "units": round(float(pd.to_numeric(frame["Qty"]).sum()), 2) if len(frame) else 0.0,
-            "margin": round(float(frame["LineMargin"].sum()), 2) if len(frame) else 0.0,
+            "margin": blended_note or (
+                round(float(frame["LineMargin"].sum()), 2) if len(frame) else 0.0
+            ),
             "transactions": int(frame["SALEID"].nunique()) if len(frame) else 0,
         }
     else:
@@ -156,8 +202,15 @@ async def sales_report(
         frame = headers_to_frame(rows)
         coverage = describe(rows, date_from, date_to, entity="Sales")
         source = "Sales"
+        # headers_to_frame's Currency is always a single synthetic "UNKNOWN"
+        # marker (Sales carries no real currency column), so this can never
+        # fire today. Kept for symmetry with the lines branch and so a future
+        # change that adds a real Currency column here is covered for free.
+        blended_note = _blended_total_note(frame)
         totals = {
-            "revenue": round(float(frame["Total"].sum()), 2) if len(frame) else 0.0,
+            "revenue": blended_note or (
+                round(float(frame["Total"].sum()), 2) if len(frame) else 0.0
+            ),
             "transactions": int(len(frame)),
         }
 
@@ -185,7 +238,9 @@ async def sales_report(
                     "if product detail is wanted."
                 )
 
-    if totals.get("transactions"):
+    if totals.get("transactions") and isinstance(totals.get("revenue"), (int, float)):
+        # avg_basket divides revenue, so it is just as meaningless as a
+        # blended revenue total when currencies were mixed; skip it too.
         totals["avg_basket"] = round(totals["revenue"] / totals["transactions"], 2)
     return SalesResult(
         frame=aggregate(frame, list(group_by)),

@@ -167,6 +167,74 @@ def test_zero_row_aggregate_exposes_avg_basket():
     assert "avg_basket" in out.columns  # the closed-Sunday case must not KeyError
 
 
+async def test_register_ids_narrow_the_lines_path_instead_of_being_dropped():
+    # The bug this guards: stock_id AND register_ids both given, on the lines
+    # path, used to filter STOCKID_FK only and silently drop register_ids —
+    # a till-level question ("how much did register 3530 do") got answered
+    # with shop-wide revenue instead. Both constraints must hold.
+    client = FakeClient({"Saleslines": [
+        line(1, 100.0, sale=1, STOREID_FK=3530),
+        line(1, 900.0, sale=2, STOREID_FK=3568),
+    ]})
+    result = await sales_report(
+        client, dt.date(2026, 8, 1), dt.date(2026, 8, 5),
+        stock_id=3229, register_ids=[3530],
+    )
+    entity, filters, _ = client.calls[0]
+    assert entity == "Saleslines"
+    assert any("STOCKID_FK eq 3229" in f for f in filters)
+    assert any("STOREID_FK eq 3530" in f for f in filters), (
+        f"register_ids was not applied as a filter: {filters}"
+    )
+    # The fake client doesn't actually filter, so this only proves the filter
+    # clause was emitted, not applied server-side; the emitted clause is what
+    # the CRITICAL finding says was silently missing.
+
+
+def test_totals_do_not_blend_currencies():
+    frame = lines_to_frame([
+        line(1, 100.0, sale=1), line(1, 100.0, sale=2, Currency="EUR"),
+    ])
+    from front_systems_mcp.reports.sales import _blended_total_note
+    note = _blended_total_note(frame)
+    assert note is not None
+    assert "NOK" in note and "EUR" in note
+
+
+async def test_report_totals_omit_blended_revenue_across_currencies():
+    client = FakeClient({"Saleslines": [
+        line(1, 100.0, sale=1), line(1, 100.0, sale=2, Currency="EUR"),
+    ]})
+    result = await sales_report(
+        client, dt.date(2026, 8, 1), dt.date(2026, 8, 5), stock_id=3229,
+    )
+    # NOT the blended 200.0 — a number here would be a silently wrong answer,
+    # exactly the failure class this project exists to prevent.
+    assert not isinstance(result.totals["revenue"], (int, float))
+    assert "currenc" in str(result.totals["revenue"]).lower()
+    assert "avg_basket" not in result.totals, (
+        "avg_basket divides revenue, so it is equally meaningless when "
+        "currencies were mixed"
+    )
+    # The per-currency breakdown is still available in the table.
+    assert set(result.frame["Currency"]) == {"NOK", "EUR"}
+
+
+def test_aggregate_without_a_total_column_raises_instead_of_zeroing():
+    # The weakest link protecting the revenue invariant: a frame built some
+    # other way than lines_to_frame/headers_to_frame (e.g. a future path
+    # passing raw rows) must not silently report 0.0 revenue.
+    frame = pd.DataFrame({
+        "Qty": [1, 2], "Price": [100.0, 50.0], "Currency": ["NOK", "NOK"],
+        "day": ["2026-08-01", "2026-08-01"],
+    })
+    with pytest.raises(ValueError) as exc:
+        aggregate(frame, ["day"])
+    message = str(exc.value)
+    assert "LineTotal" in message and "Total" in message
+    assert "lines_to_frame" in message
+
+
 def test_unknown_group_by_key_explains_itself():
     frame = headers_to_frame([
         {"SALEID": 1, "Total": 100.0, "IsVoided": False, "SaleDate": "2026-08-01T00:00:00"},
