@@ -102,6 +102,20 @@ class FrontSystemsClient:
 
         raise last or ApiError(f"{entity}: request failed.")
 
+    async def fetch_raw(self, entity: str, params: dict[str, str]) -> list[dict]:
+        """Escape hatch for endpoints whose parameters are not OData filters.
+
+        Stockstatus takes snapshotDateTime as an ordinary query parameter, so it
+        cannot go through build_params.
+        """
+        url = f"{self._config.base_url}/odata/{entity}"
+        response = await self._http.get(url, params=params)
+        if response.status_code in (401, 403):
+            raise AuthError(f"{entity}: authentication rejected.")
+        if response.status_code != 200:
+            raise ApiError(f"{entity}: HTTP {response.status_code}.")
+        return self._parse(entity, response)
+
     @staticmethod
     def _parse(entity: str, response: httpx.Response) -> list[dict]:
         try:
