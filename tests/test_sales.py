@@ -121,3 +121,58 @@ async def test_real_fixture_reconciles_lines_against_headers():
     assert lines_total == heads_total, (
         f"lines {lines_total} != headers {heads_total}"
     )
+
+
+async def test_header_fallback_without_stock_id_is_warned():
+    client = FakeClient({"Sales": [
+        {"SALEID": 1, "Total": 100.0, "IsVoided": False, "SaleDate": "2026-08-02T00:00:00"},
+    ]})
+    result = await sales_report(
+        client, dt.date(2026, 8, 1), dt.date(2026, 8, 5), register_ids=[3530],
+    )
+    assert result.source == "Sales"
+    assert any("stock" in w.lower() for w in result.coverage.warnings)
+
+
+async def test_period_straddling_line_history_is_warned():
+    client = FakeClient({"Sales": [
+        {"SALEID": 1, "Total": 100.0, "IsVoided": False, "SaleDate": "2026-07-28T00:00:00"},
+    ]})
+    result = await sales_report(
+        client, dt.date(2026, 7, 25), dt.date(2026, 8, 10), stock_id=3229,
+    )
+    assert result.source == "Sales"
+    assert any("2026-08-01" in w for w in result.coverage.warnings)
+
+
+def test_units_is_not_a_row_count_for_header_data():
+    import math
+    frame = headers_to_frame([
+        {"SALEID": 1, "Total": 100.0, "IsVoided": False, "SaleDate": "2026-08-01T00:00:00"},
+        {"SALEID": 2, "Total": 50.0, "IsVoided": False, "SaleDate": "2026-08-01T00:00:00"},
+    ])
+    out = aggregate(frame, ["day"])
+    assert math.isnan(out["units"].iloc[0]), "a row count must not be reported as units"
+    assert out["transactions"].iloc[0] == 2
+
+
+def test_empty_and_populated_aggregate_have_the_same_columns():
+    populated = aggregate(lines_to_frame([line(1, 100.0)]), ["day"])
+    empty = aggregate(lines_to_frame([]), ["day"])
+    assert list(empty.columns) == list(populated.columns)
+
+
+def test_zero_row_aggregate_exposes_avg_basket():
+    out = aggregate(lines_to_frame([]), ["day"])
+    assert "avg_basket" in out.columns  # the closed-Sunday case must not KeyError
+
+
+def test_unknown_group_by_key_explains_itself():
+    frame = headers_to_frame([
+        {"SALEID": 1, "Total": 100.0, "IsVoided": False, "SaleDate": "2026-08-01T00:00:00"},
+    ])
+    with pytest.raises(ValueError) as exc:
+        aggregate(frame, ["Brand"])
+    message = str(exc.value)
+    assert "Brand" in message
+    assert "stock" in message.lower() or "line" in message.lower()

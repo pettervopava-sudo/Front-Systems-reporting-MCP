@@ -71,18 +71,43 @@ def headers_to_frame(rows: list[dict]) -> pd.DataFrame:
     return frame
 
 
+#: group_by keys that are always synthesised by lines_to_frame/headers_to_frame,
+#: so they're valid even when a caller passes an empty frame with a reduced
+#: column set.
+_SYNTHESIZED_GROUP_KEYS = frozenset({"day", "Currency"})
+
+
+def _validate_group_by(frame: pd.DataFrame, group_by: Sequence[str]) -> None:
+    available = set(frame.columns) | _SYNTHESIZED_GROUP_KEYS
+    unknown = [key for key in group_by if key not in available]
+    if unknown:
+        raise ValueError(
+            f"Cannot group by {unknown!r}: not present in this data. Available "
+            f"keys for this source: {sorted(available)}. Product dimensions "
+            "such as Brand need line-level data — pass a stock_id and a period "
+            f"from {LINES_HISTORY_START} onward so sales_report uses Saleslines."
+        )
+
+
 def aggregate(frame: pd.DataFrame, group_by: Sequence[str]) -> pd.DataFrame:
     """Grouped totals. Currency is always a grouping key — a blended total
     across currencies is silently meaningless."""
+    _validate_group_by(frame, group_by)
+    # Fixed column set so a zero-row result (e.g. a closed Sunday) has exactly
+    # the same shape as a populated one — no downstream KeyError on avg_basket.
+    columns = [*group_by, "Currency", "revenue", "units", "transactions",
+               "margin", "avg_basket"]
     if frame.empty:
-        return pd.DataFrame(columns=[*group_by, "Currency", "revenue",
-                                     "units", "transactions", "margin"])
+        return pd.DataFrame(columns=columns)
     keys = [*group_by, "Currency"]
     revenue = "LineTotal" if "LineTotal" in frame else "Total"
+    has_qty = "Qty" in frame
     out = frame.groupby(keys, dropna=False).apply(
         lambda g: pd.Series({
             "revenue": round(_numeric(g, revenue).sum(), 2),
-            "units": round(_numeric(g, "Qty").sum(), 2) if "Qty" in g else float(len(g)),
+            # A row count is not a unit count — report nan rather than a
+            # mislabelled number when the source (headers) has no Qty.
+            "units": round(_numeric(g, "Qty").sum(), 2) if has_qty else float("nan"),
             "transactions": int(g["SALEID"].nunique()) if "SALEID" in g else len(g),
             "margin": round(_numeric(g, "LineMargin").sum(), 2)
             if "LineMargin" in g else float("nan"),
@@ -92,7 +117,7 @@ def aggregate(frame: pd.DataFrame, group_by: Sequence[str]) -> pd.DataFrame:
     out["avg_basket"] = (
         out["revenue"] / out["transactions"].replace(0, pd.NA)
     ).round(2)
-    return out
+    return out[columns]
 
 
 async def sales_report(
@@ -135,6 +160,30 @@ async def sales_report(
             "revenue": round(float(frame["Total"].sum()), 2) if len(frame) else 0.0,
             "transactions": int(len(frame)),
         }
+
+        # The table choice above is otherwise silent: a caller cannot tell a
+        # "no product breakdown available" answer from a "no product
+        # breakdown exists" one. Only relevant when part of the period could
+        # have used Saleslines at all (i.e. it reaches 2026-08-01 or later).
+        if prefer_lines and date_to > LINES_HISTORY_START:
+            if stock_id is None:
+                coverage.warnings.append(
+                    "No stock_id was given, so this period (which reaches "
+                    f"{LINES_HISTORY_START} or later) was served entirely from "
+                    "Sales headers, with no product, unit or margin detail. "
+                    "Pass a stock_id to use Saleslines for the part of the "
+                    "range on or after that date."
+                )
+            elif date_from < LINES_HISTORY_START:
+                coverage.warnings.append(
+                    f"Line-level data exists only from {LINES_HISTORY_START} "
+                    f"onward, so this entire request ({date_from}..{date_to}) "
+                    "was served from Sales headers with no product, unit or "
+                    "margin detail, even though a stock_id was given. Split "
+                    f"the request at {LINES_HISTORY_START} and query "
+                    "Saleslines separately for the part from that date onward "
+                    "if product detail is wanted."
+                )
 
     if totals.get("transactions"):
         totals["avg_basket"] = round(totals["revenue"] / totals["transactions"], 2)
