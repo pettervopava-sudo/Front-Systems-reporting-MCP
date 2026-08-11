@@ -146,3 +146,28 @@ def test_or_group_of_display_fields_is_rejected():
 
 def test_negative_ids_are_accepted():
     build_params([eq("STOCKID_FK", -1)], ["SALEID"])
+
+
+@pytest.mark.parametrize("field", [
+    "FirstName", "LastName", "Email", "Phone", "Address", "PostalCode",
+    "City", "CUSTOMERID_FK", "PERSONID_FK",
+])
+def test_build_params_rejects_pii_in_select(field):
+    # raw_query passes $select straight through; this is a GDPR guard against
+    # customer PII (name/email/phone/address) landing in model context, and it
+    # lives in build_params so every caller through client.fetch is covered,
+    # not just raw_query.
+    with pytest.raises(UnsafeQueryError) as exc:
+        build_params(["STOCKID_FK eq 1"], ["SALEID", field])
+    assert field in str(exc.value)
+
+
+def test_build_params_rejects_pii_hidden_among_valid_select_fields():
+    with pytest.raises(UnsafeQueryError) as exc:
+        build_params([], ["SALEID", "Total", "SaleDate", "Email"])
+    assert "Email" in str(exc.value)
+
+
+def test_build_params_accepts_select_with_no_pii():
+    params = build_params([], ["SALEID", "STOREID_FK", "Total", "SaleDate"])
+    assert params["$select"] == "SALEID,STOREID_FK,Total,SaleDate"

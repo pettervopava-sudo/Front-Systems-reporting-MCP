@@ -17,6 +17,14 @@ MAX_TOP = 2_000_000
 
 FILTERABLE = frozenset({"STOCKID_FK", "STOREID_FK", "PRODUCTID_FK", "SaleDate"})
 
+#: Saleslines carries customer PII on every row. Denied in $select regardless
+#: of caller (raw_query or otherwise) — this is a GDPR guard, not a UX nicety,
+#: so it lives in build_params where every fetch() call passes through it.
+PII_FIELDS = frozenset({
+    "FirstName", "LastName", "Email", "Phone", "Address", "PostalCode",
+    "City", "CUSTOMERID_FK", "PERSONID_FK",
+})
+
 #: Allowlist patterns for filter clause shapes. Only accept what the helper
 #: functions (eq, any_of, date_range) emit. Anything else is rejected to prevent
 #: hand-built filters that bypass the whitelist.
@@ -87,6 +95,13 @@ def build_params(
         raise UnsafeQueryError(
             "$select is required. Saleslines carries customer PII on every row, "
             "so an unrestricted query moves personal data into context."
+        )
+    pii_requested = [field.strip() for field in select if field.strip() in PII_FIELDS]
+    if pii_requested:
+        raise UnsafeQueryError(
+            f"$select requests customer PII field(s) {pii_requested!r}, which "
+            "this server refuses to move into model context (a GDPR guard). "
+            f"Denied fields: {', '.join(sorted(PII_FIELDS))}."
         )
     # Validate filters using an allowlist of shapes that the helpers emit.
     # Anything not matching is rejected — no hand-built filters allowed.
