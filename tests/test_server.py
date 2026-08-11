@@ -52,11 +52,20 @@ def test_format_result_surfaces_warnings_prominently():
     assert "2026-08-01" in text  # the history-start warning must be visible
 
 
-def test_every_registered_tool_is_read_only():
-    names = set(server.TOOL_NAMES)
-    assert names == {"list_stores", "sales_report", "stock_report", "raw_query"}
+async def test_every_registered_tool_is_read_only():
+    # Ask the MCP server itself what's registered, rather than trusting the
+    # hand-maintained TOOL_NAMES constant. Without this, adding a mutating
+    # tool (e.g. delete_sale) and forgetting to update TOOL_NAMES would pass
+    # silently: the old version of this test only checked TOOL_NAMES against
+    # itself, so it could never fail.
+    tools = await server.mcp.list_tools()
+    registered_names = {t.name for t in tools}
+    assert registered_names == set(server.TOOL_NAMES), (
+        "TOOL_NAMES has drifted from what's actually registered with the "
+        "MCP server"
+    )
     assert not any(
-        w in n for n in names
+        w in n for n in registered_names
         for w in ("create", "update", "delete", "insert", "post", "adjust")
     )
 
@@ -98,6 +107,32 @@ def test_small_frames_are_not_truncated():
     text = server.format_result(result)
     assert "2026-08-01" in text
     assert "showing" not in text.lower()
+
+
+def test_chart_x_axis_uses_the_single_group_by_key_directly():
+    import pandas as pd
+
+    frame = pd.DataFrame({"day": ["2026-08-01", "2026-08-02"], "revenue": [1.0, 2.0]})
+    out_frame, x = server.chart_x_axis(frame, ["day"])
+    assert x == "day"
+    assert out_frame is frame
+
+
+def test_chart_x_axis_joins_a_multi_key_group_by_so_bars_do_not_collide():
+    import pandas as pd
+
+    # The bug this guards: with group_by=["day", "Brand"], using only the
+    # first column as x left two rows both labelled "2026-08-01" — bars for
+    # different brands collided on one tick instead of getting their own.
+    frame = pd.DataFrame({
+        "day": ["2026-08-01", "2026-08-01"],
+        "Brand": ["Nike", "Adidas"],
+        "revenue": [100.0, 50.0],
+    })
+    out_frame, x = server.chart_x_axis(frame, ["day", "Brand"])
+    assert x not in ("day", "Brand")  # a new, distinct label column
+    assert list(out_frame[x]) == ["2026-08-01 · Nike", "2026-08-01 · Adidas"]
+    assert len(set(out_frame[x])) == 2, "x-values must not repeat"
 
 
 def test_truncation_never_drops_the_warnings():

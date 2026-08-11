@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
+import pandas as pd
 from mcp.server.fastmcp import FastMCP
 
 from .client import FrontSystemsClient
@@ -53,8 +54,14 @@ def format_result(result: "sales_report_mod.SalesResult") -> str:
         lines.append(f"WARNING: {warning}")
     lines.append("")
     for key, value in result.totals.items():
-        lines.append(f"{key}: {value:,.2f}" if isinstance(value, float)
-                     else f"{key}: {value:,}")
+        if isinstance(value, float):
+            lines.append(f"{key}: {value:,.2f}")
+        elif isinstance(value, int):
+            lines.append(f"{key}: {value:,}")
+        else:
+            # A blended-currency total is replaced with an explanatory string
+            # rather than a number (see _blended_total_note); print it as-is.
+            lines.append(f"{key}: {value}")
     if not result.frame.empty:
         lines.append("")
         total_rows = len(result.frame)
@@ -69,6 +76,23 @@ def format_result(result: "sales_report_mod.SalesResult") -> str:
         else:
             lines.append(result.frame.to_string(index=False))
     return "\n".join(lines)
+
+
+def chart_x_axis(frame: pd.DataFrame, group_by: list[str]) -> tuple[pd.DataFrame, str]:
+    """Pick (or build) the column write_bar_chart should use as x.
+
+    With a single group-by key, that column is the x-axis directly. With
+    several (e.g. ["day", "Brand"]), using only the first one leaves x-values
+    repeating — two bars both labelled "2026-08-01" collide on one tick — so
+    every key is joined into one label column instead.
+    """
+    keys = [k for k in group_by if k in frame.columns] or [frame.columns[0]]
+    if len(keys) == 1:
+        return frame, keys[0]
+    labelled = frame.copy()
+    x_col = " · ".join(keys)
+    labelled[x_col] = labelled[keys].astype(str).agg(" · ".join, axis=1)
+    return labelled, x_col
 
 
 @mcp.tool()
@@ -126,8 +150,8 @@ async def sales_report(
                 ])
             text += f"\n\nWorkbook: {path}"
         if "chart" in wanted and not result.frame.empty:
-            group = result.frame.columns[0]
-            path = write_bar_chart(result.frame, group, "revenue",
+            chart_frame, group = chart_x_axis(result.frame, list(group_by or ["day"]))
+            path = write_bar_chart(chart_frame, group, "revenue",
                                    f"Revenue by {group}", out_dir / f"{stem}.png")
             text += f"\nChart: {path}"
     return text
