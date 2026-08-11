@@ -1,0 +1,2564 @@
+{
+ "value": [
+  {
+   "SALEID": 125086012,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T10:12:06.313",
+   "Total": "2099.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125087631,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T10:32:15.173",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125088839,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T10:38:15.44",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125091029,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:09:00.013",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125091346,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:15:07.037",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125091380,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:15:32.29",
+   "Total": "-1399.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125091603,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:16:22.18",
+   "Total": "3599.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125091854,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:18:02.39",
+   "Total": "1399.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125091857,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:18:11.577",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125092509,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:24:37.303",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125093125,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:30:24.03",
+   "Total": "1799.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125093257,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:29:34.543",
+   "Total": "2823.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125093384,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:31:36.453",
+   "Total": "3004.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125093491,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:32:48.76",
+   "Total": "2004.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125094376,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:39:54.38",
+   "Total": "1297.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125094455,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:40:15.367",
+   "Total": "1049.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125094883,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:30:39.5",
+   "Total": "978.60",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125094893,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:43:07.527",
+   "Total": "899.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125094897,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:44:07.213",
+   "Total": "1399.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125095636,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:49:02.64",
+   "Total": "424.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125095908,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:50:00.633",
+   "Total": "3358.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125096285,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:53:29.357",
+   "Total": "1964.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125096461,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:53:17.56",
+   "Total": "1599.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125096781,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:55:19.49",
+   "Total": "5288.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125096975,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T11:57:29.927",
+   "Total": "1098.70",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125098056,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:05:05.157",
+   "Total": "2267.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125098741,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:08:24.16",
+   "Total": "2168.60",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125098945,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:11:41.697",
+   "Total": "899.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125099080,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:11:02.827",
+   "Total": "1249.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125100953,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:24:58.137",
+   "Total": "243.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125101698,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:30:05.293",
+   "Total": "1999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125102582,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:34:01.143",
+   "Total": "769.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125102787,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:36:25.53",
+   "Total": "2499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125103882,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:41:19.24",
+   "Total": "4139.40",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125104009,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:43:39.007",
+   "Total": "1048.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125105138,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:50:53.67",
+   "Total": "1259.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125105461,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:52:00.03",
+   "Total": "2299.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125106500,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T12:57:37.233",
+   "Total": "1333.60",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125107239,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:02:32.13",
+   "Total": "1503.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125107543,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:04:17.47",
+   "Total": "959.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125108780,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:10:16.68",
+   "Total": "4698.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125109611,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:16:19.15",
+   "Total": "1049.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125109630,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:16:40.07",
+   "Total": "1199.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125109990,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6335,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:18:09.297",
+   "Total": "2454.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125110123,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:15:02.157",
+   "Total": "9102.40",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125110382,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:21:15.52",
+   "Total": "9102.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125110568,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:20:00.72",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125110589,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:23:22.947",
+   "Total": "1999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125110635,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:23:42.53",
+   "Total": "399.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125110979,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:25:27.89",
+   "Total": "1624.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125111199,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:26:09.033",
+   "Total": "3904.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125111955,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:31:03.153",
+   "Total": "3898.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125112114,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:31:31.18",
+   "Total": "-349.90",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125112503,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:33:07.563",
+   "Total": "1699.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125112675,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:34:40.143",
+   "Total": "4399.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125113091,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:37:17.917",
+   "Total": "3203.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125113277,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:38:19.773",
+   "Total": "146.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125113497,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:39:38.203",
+   "Total": "804.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125114074,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:42:01.067",
+   "Total": "1319.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125114412,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:45:19.727",
+   "Total": "2899.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125114524,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:44:52.33",
+   "Total": "1439.20",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125115434,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:47:59.717",
+   "Total": "3747.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125115924,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:53:33.607",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125116362,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:55:33.04",
+   "Total": "2899.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125116909,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:58:25.117",
+   "Total": "1599.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125117158,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T13:58:42.677",
+   "Total": "649.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125117508,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:00:13.037",
+   "Total": "1499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125117787,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:03:06.633",
+   "Total": "699.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125120668,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:19:58.147",
+   "Total": "559.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125120800,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:20:18.417",
+   "Total": "998.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125121594,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:25:32.273",
+   "Total": "699.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125121858,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:26:52.647",
+   "Total": "2309.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125121959,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:24:01.237",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125122687,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:32:09.83",
+   "Total": "799.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125123100,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:33:46.903",
+   "Total": "4199.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125124346,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:41:26.45",
+   "Total": "1499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125124722,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:43:40.197",
+   "Total": "5039.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125124803,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:42:22.32",
+   "Total": "1499.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125125690,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:50:22.99",
+   "Total": "159.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125126142,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:52:18.587",
+   "Total": "1799.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125126519,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T14:55:34.913",
+   "Total": "1509.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125127868,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:03:55.13",
+   "Total": "1024.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125128141,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:05:30.897",
+   "Total": "4599.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125129114,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:12:07.32",
+   "Total": "3999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125129977,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:17:37.293",
+   "Total": "1699.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125130804,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:22:31.387",
+   "Total": "1804.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125131612,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:28:06.52",
+   "Total": "3999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125131891,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:29:16.987",
+   "Total": "1504.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125132033,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:25:41.843",
+   "Total": "2459.40",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125132727,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:35:00.653",
+   "Total": "1619.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125133247,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:39:46.727",
+   "Total": "29.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125133905,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:42:19.56",
+   "Total": "719.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125134717,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:49:55.693",
+   "Total": "848.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125135019,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:52:05.113",
+   "Total": "1609.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125135434,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:55:53.693",
+   "Total": "6499.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125136093,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T15:59:09.27",
+   "Total": "1259.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125136304,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:00:31.263",
+   "Total": "2518.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125136385,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:01:18.193",
+   "Total": "2408.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125136522,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:03:29.75",
+   "Total": "1679.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125137183,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:07:55.913",
+   "Total": "1699.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125137205,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:08:57.617",
+   "Total": "1019.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125137536,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:11:55.317",
+   "Total": "1499.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125138215,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:17:29.273",
+   "Total": "3198.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125138421,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:17:40.753",
+   "Total": "1688.60",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125138951,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:23:48.247",
+   "Total": "4004.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125138975,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:24:25.313",
+   "Total": "3059.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125139084,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:25:39.67",
+   "Total": "489.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125139119,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:26:06.853",
+   "Total": "1799.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125139360,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:27:04.243",
+   "Total": "2599.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125139876,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:29:07.247",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125140208,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:36:18.063",
+   "Total": "3999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125140243,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:34:27.557",
+   "Total": "4099.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125140357,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:38:08.523",
+   "Total": "489.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125140418,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:38:14.46",
+   "Total": "2878.80",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125140434,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:39:25.627",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125140908,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:39:41.71",
+   "Total": "4293.70",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125141152,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:44:08.787",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125141164,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:46:18.913",
+   "Total": "549.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125141205,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:44:29.123",
+   "Total": "3698.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125141351,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:47:36.577",
+   "Total": "599.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125141701,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:51:12.803",
+   "Total": "4499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125141734,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:50:41.783",
+   "Total": "1499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125142215,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:56:24.977",
+   "Total": "1958.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125142266,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:57:33.77",
+   "Total": "4004.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125142327,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:58:36.557",
+   "Total": "159.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125142512,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T16:59:18.41",
+   "Total": "1259.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125142625,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:01:59.877",
+   "Total": "1799.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125142789,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:02:36.65",
+   "Total": "2403.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125142793,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:02:05.197",
+   "Total": "1259.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125142876,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:03:53.673",
+   "Total": "1259.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143021,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:05:48.713",
+   "Total": "1299.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143078,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:06:27.043",
+   "Total": "1264.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143094,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:06:58.513",
+   "Total": "618.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143426,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:08:14.593",
+   "Total": "3999.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125143492,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:11:53.223",
+   "Total": "3999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143625,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:14:05.583",
+   "Total": "3999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143680,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:14:34.42",
+   "Total": "1899.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143766,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:15:52.437",
+   "Total": "1299.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125143910,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:16:53.57",
+   "Total": "2449.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125144748,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:27:34.947",
+   "Total": "2498.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125144893,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:30:25.887",
+   "Total": "-2699.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125144924,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:30:07.3",
+   "Total": "3297.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125145271,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:34:39.62",
+   "Total": "709.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125145539,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:31:25.117",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125145572,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:39:18.903",
+   "Total": "704.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125145655,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:40:06.103",
+   "Total": "1199.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125145667,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:39:38.957",
+   "Total": "1754.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125145714,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:40:34.86",
+   "Total": "559.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125146995,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T17:59:35.453",
+   "Total": "2604.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125147119,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T18:00:53.207",
+   "Total": "3714.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125147133,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T18:00:51.397",
+   "Total": "1904.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125147147,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T18:02:31.16",
+   "Total": "1439.40",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125147177,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T18:03:09.063",
+   "Total": "1399.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125147251,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T18:05:41.987",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125147303,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-01T00:00:00",
+   "SaleDateTime": "2026-08-01T18:06:24.147",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125165507,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T10:09:19.863",
+   "Total": "2199.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125166355,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T10:08:19.35",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125169306,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T10:53:45.263",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125171373,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:11:55.487",
+   "Total": "4509.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125172007,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T10:45:48.29",
+   "Total": "25732.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125173721,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:32:02.09",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125173899,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:34:56.23",
+   "Total": "899.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125174067,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:36:34.877",
+   "Total": "839.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125174983,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:43:10.163",
+   "Total": "2299.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125175540,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:48:01.46",
+   "Total": "2299.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125175793,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:49:39.933",
+   "Total": "1299.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125176216,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:53:40.947",
+   "Total": "1084.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125177337,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:01:18.66",
+   "Total": "1049.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125177486,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:02:51.51",
+   "Total": "345.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125178466,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T11:55:36.57",
+   "Total": "1019.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125180698,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:27:35.773",
+   "Total": "499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125180809,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:28:25.477",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125181466,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:32:39.093",
+   "Total": "899.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125182011,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:36:46.163",
+   "Total": "1024.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125182184,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:35:36.423",
+   "Total": "3799.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125183309,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:43:29.473",
+   "Total": "1329.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125183412,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:45:15.05",
+   "Total": "1264.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125183466,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:45:34.697",
+   "Total": "1679.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125184579,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T12:53:14.937",
+   "Total": "2396.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125188101,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T13:18:06.54",
+   "Total": "2398.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125189075,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T13:26:13.237",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125189185,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T13:08:50.263",
+   "Total": "1499.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125190852,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T13:37:06.8",
+   "Total": "3658.80",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125193988,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T13:58:25.72",
+   "Total": "1599.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125194565,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:02:25.673",
+   "Total": "3599.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125194623,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:03:05.49",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125195495,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:06:10.293",
+   "Total": "799.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125195984,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:12:24.04",
+   "Total": "2279.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125196208,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:14:00.163",
+   "Total": "6479.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125197142,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:22:18.283",
+   "Total": "748.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125197581,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:24:42.767",
+   "Total": "2048.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125198396,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:27:11.583",
+   "Total": "3299.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125198544,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:31:05.143",
+   "Total": "1119.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125199423,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:38:23.11",
+   "Total": "2819.40",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125200525,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:45:52.54",
+   "Total": "1799.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125200838,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:46:29.143",
+   "Total": "849.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125201118,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T14:49:34.847",
+   "Total": "1544.45",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125202908,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:03:03.893",
+   "Total": "1799.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125203626,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:07:22.79",
+   "Total": "3118.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125203692,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6335,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:08:28.877",
+   "Total": "-1899.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125203799,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6335,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:10:32.633",
+   "Total": "1899.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125203870,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6335,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:10:59.157",
+   "Total": "-1899.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125203886,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:09:21.467",
+   "Total": "2187.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125205001,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:19:02.893",
+   "Total": "1699.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125206313,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:28:52.74",
+   "Total": "449.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125206504,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:31:09.737",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125206576,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:31:31.467",
+   "Total": "-1499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125206698,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:32:28.58",
+   "Total": "559.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125207330,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:35:26.457",
+   "Total": "1319.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125208230,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:41:32.513",
+   "Total": "796.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125208284,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:41:43.777",
+   "Total": "779.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125208735,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:44:41.447",
+   "Total": "249.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125209369,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T15:48:08.17",
+   "Total": "1399.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125211444,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:05:51.637",
+   "Total": "2999.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125211962,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:09:55.177",
+   "Total": "899.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125212028,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:10:41.743",
+   "Total": "499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125212530,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:14:10.237",
+   "Total": "1144.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125212995,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:17:04.873",
+   "Total": "2799.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125213138,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:20:21.27",
+   "Total": "2799.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125213142,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:20:18.303",
+   "Total": "1019.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125213161,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:20:35.513",
+   "Total": "2799.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125213625,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:22:58.073",
+   "Total": "5404.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125213739,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:25:41.42",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125214209,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:28:43.89",
+   "Total": "1599.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125214773,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:34:07.547",
+   "Total": "799.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125215194,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:37:16.497",
+   "Total": "3299.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125215510,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:39:51.3",
+   "Total": "849.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125216000,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:45:21.807",
+   "Total": "199.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125217474,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:58:00.61",
+   "Total": "1049.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125217506,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:58:28.417",
+   "Total": "1399.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125217669,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T16:59:46.583",
+   "Total": "1259.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125218323,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:06:05.473",
+   "Total": "1899.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125218615,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:09:20.673",
+   "Total": "959.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125219245,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:16:13.43",
+   "Total": "1054.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125219353,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:17:47.313",
+   "Total": "1302.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125219619,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:21:08.307",
+   "Total": "899.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125220083,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:25:45.657",
+   "Total": "1499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125220682,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:33:09.637",
+   "Total": "1404.50",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125221022,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:36:31.033",
+   "Total": "1199.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125221061,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:38:03.117",
+   "Total": "1379.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125221677,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:43:52.33",
+   "Total": "6971.60",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125222456,
+   "STOREID_FK": 3529,
+   "POSID_FK": 6580,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:48:57.423",
+   "Total": "10443.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125222715,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T17:58:45.48",
+   "Total": "1079.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125224024,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T18:19:31.643",
+   "Total": "1399.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125224643,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T18:30:30.503",
+   "Total": "0.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125225116,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T18:38:33.03",
+   "Total": "1804.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125225845,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T18:51:47.77",
+   "Total": "1079.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125226246,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T18:55:25.097",
+   "Total": "2104.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125226800,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:11:14.323",
+   "Total": "599.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125226978,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:14:35.093",
+   "Total": "849.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125227157,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:19:51.803",
+   "Total": "1749.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125227515,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:27:00.08",
+   "Total": "1084.40",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125228130,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:45:25.193",
+   "Total": "1499.00",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125228347,
+   "STOREID_FK": 3431,
+   "POSID_FK": 6307,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:50:27.237",
+   "Total": "1049.30",
+   "IsVoided": false,
+   "IsComplete": true
+  },
+  {
+   "SALEID": 125228443,
+   "STOREID_FK": 3530,
+   "POSID_FK": 6334,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:29:34.077",
+   "Total": "0.00",
+   "IsVoided": true,
+   "IsComplete": false
+  },
+  {
+   "SALEID": 125228810,
+   "STOREID_FK": 3568,
+   "POSID_FK": 6345,
+   "SaleDate": "2026-08-03T00:00:00",
+   "SaleDateTime": "2026-08-03T19:59:36.583",
+   "Total": "2953.00",
+   "IsVoided": false,
+   "IsComplete": true
+  }
+ ]
+}

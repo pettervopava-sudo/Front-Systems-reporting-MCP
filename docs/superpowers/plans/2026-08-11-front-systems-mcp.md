@@ -449,7 +449,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from front_systems_mcp.config import load_config  # noqa: E402
 
-PII = {"FirstName", "LastName", "Email", "Phone", "Address", "PostalCode", "City"}
+PII = {"FirstName", "LastName", "Email", "Phone", "Address", "PostalCode", "City",
+       "CUSTOMERID_FK", "PERSONID_FK"}
 OUT = Path(__file__).resolve().parents[1] / "tests" / "fixtures"
 
 LINE_FIELDS = [
@@ -458,7 +459,7 @@ LINE_FIELDS = [
     "IsVoided", "Brand", "Group", "Name", "SizeLabel", "Store", "Stock",
 ]
 SALES_FIELDS = [
-    "SALEID", "STOREID_FK", "POSID_FK", "CUSTOMERID_FK", "SaleDate",
+    "SALEID", "STOREID_FK", "POSID_FK", "SaleDate",
     "SaleDateTime", "Total", "IsVoided", "IsComplete",
 ]
 
@@ -1366,7 +1367,7 @@ LINE_SELECT = [
 ]
 
 HEADER_SELECT = [
-    "SALEID", "STOREID_FK", "POSID_FK", "CUSTOMERID_FK", "SaleDate",
+    "SALEID", "STOREID_FK", "POSID_FK", "SaleDate",
     "SaleDateTime", "Total", "IsVoided", "IsComplete",
 ]
 
