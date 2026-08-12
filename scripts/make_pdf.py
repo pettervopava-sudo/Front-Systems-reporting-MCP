@@ -40,6 +40,7 @@ section,.note,.kpis{break-inside:avoid-page;}
 .mast{padding-bottom:14px;}
 .mast .no{font-size:56px;}
 .mast h1{font-size:30px;}
+.brand{width:96px;}
 .plot{break-inside:avoid;}
 /* the 14-column month matrix is wider than landscape A4 even zoomed; shrink
    just that section's table so okt-des are not clipped off the page edge */
@@ -73,6 +74,7 @@ def unavailable_page(mnd: str, ry: int) -> str:
     <h1>Sesonger &middot; Rabatter &middot; Merker &middot; Selgere</h1>
     <div class="win">Ikke tilgjengelig for {mnd} {ry}.</div>
   </div>
+  <div class="brand" role="img" aria-label="H&Oslash;yer"></div>
 </header>
 <div class="note"><strong>Hvorfor.</strong> Disse delene krever varelinjedata,
   som ikke finnes i API-et for {mnd} {ry} eller tidligere perioder. Tallene

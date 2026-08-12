@@ -45,6 +45,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "scripts"))
 
 from front_systems_mcp.client import FrontSystemsClient  # noqa: E402
 from front_systems_mcp.config import load_config  # noqa: E402
@@ -323,6 +324,11 @@ def main():
     print(f"  wrote {out}", file=sys.stderr)
 
 
+def _logo_css_for_template() -> str:
+    import line_reports
+    return "<style>" + line_reports.LOGO_CSS + "</style>" if line_reports.LOGO_CSS else ""
+
+
 def render(**k):
     tpl = (pathlib.Path(__file__).parent / "monthly_report_template.html"
            ).read_text(encoding="ascii")
@@ -459,6 +465,7 @@ def render(**k):
             .replace("__PREV2AAR__", str(ry - 2))
             .replace("__KPI_ROWS__", kpi_rows)
             .replace("__BF_BLOCK__", bf_block)
+            .replace("__LOGO_CSS__", _logo_css_for_template())
             .replace("__STORE_ROWS__", store_rows)
             .replace("__MATRIX_ROWS__", mrows)
             .replace("__CHART__", chart)

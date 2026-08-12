@@ -173,6 +173,38 @@ code{font-family:var(--mono);font-size:.92em;background:var(--ox-soft);
 @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
 """
 
+
+def _logo_css() -> str:
+    """Brand mark as theme tokens: ink variant on paper, paper variant on dark.
+
+    Built from the original mark (never redrawn); both variants share the
+    exact same alpha shape. Empty string if the assets are missing, so the
+    reports still build without them.
+    """
+    import base64
+    a = pathlib.Path(__file__).parent / "assets"
+    try:
+        ink = base64.b64encode((a / "hoyer_logo_ink.png").read_bytes()).decode()
+        pap = base64.b64encode((a / "hoyer_logo_paper.png").read_bytes()).decode()
+    except FileNotFoundError:
+        return ""
+    u = "url(data:image/png;base64,"
+    return (
+        f":root{{--logo:{u}{ink})}}"
+        f'@media (prefers-color-scheme:dark){{:root:not([data-theme="light"])'
+        f"{{--logo:{u}{pap})}}}}"
+        f':root[data-theme="dark"]{{--logo:{u}{pap})}}'
+        f':root[data-theme="light"]{{--logo:{u}{ink})}}'
+        ".brand{width:132px;aspect-ratio:300/210;flex-shrink:0;"
+        "background:var(--logo) center/contain no-repeat;margin-left:auto;"
+        "align-self:center;}"
+        "@media (max-width:640px){.brand{width:92px}}"
+    )
+
+
+LOGO_CSS = _logo_css()
+CSS = CSS + LOGO_CSS
+
 TIP_JS = """
 const tip=document.getElementById("tip");
 function bind(node,text){
@@ -214,6 +246,7 @@ def page(current, no, title, window_note, body, foot_extra="") -> str:
     <h1>{title}</h1>
     <div class="win">{window_note}</div>
   </div>
+  <div class="brand" role="img" aria-label="H&Oslash;yer"></div>
 </header>
 {body}
 <footer>
