@@ -2,7 +2,8 @@
 """HØYER report suite — the line-data sections of the monthly report deck.
 
 Generates reports 02–07 of the suite (Omsetning og BF, Sesonger, Rabatter,
-Merker, Selgere, Diverse) from Saleslines, which exists from 2026-08-01.
+Merker, Selgere, Diverse) from Saleslines, fetched via the endpoint's
+own from/to window parameters (full history back to 2022).
 Report 01 (månedsrapporten) comes from monthly_report.py.
 
 All revenue is SUM(Qty * Price); Price is a unit price and returns carry
@@ -50,11 +51,12 @@ STOCK_STORE = {
     203: "Høyer Sørlandssenteret", 193: "Høyer Stadionparken",
     150: "Høyer Storo", 151: "Høyer Strømmen", 5368: "Høyer Strømmen",
     181: "Høyer Trondheim", 2014: "Høyer Trondheim", 183: "Høyer Webshop",
+    279: "Høyer Bergen",  # linjedata-stock; avviklet 2026-08-01, med t.o.m. juli
 }
-EXCLUDED_STOCKS = {1333, 1901}  # BMB — the deck excludes them
+EXCLUDED_STOCKS = {1333, 1901, 2957, 5442}  # BMB + Outlet Nydalen + Teststore
 SYSTEM_SELLERS = {"webshop", "shopify integrasjon", "shopify", "integrasjon"}
 SPECIFIC_BRANDS = ["Polo Ralph Lauren", "By Malene Birger", "NN.07"]
-SELLER_MIN_TRANS = 40  # deck uses >=100/month; scaled to the 11-day window
+SELLER_MIN_TRANS = 40  # default for short windows; use --seller-min 100 for full months
 
 SUITE = [
     ("01_Manedsrapport_juli_2026.html", "M&aring;nedsrapport juli"),
@@ -237,7 +239,9 @@ class L:
         self.qty = q
         self.rev = round(q * float(r["Price"] or 0), 2)
         self.cogs = round(q * float(r["Cost"] or 0), 2)
-        self.bf = round(self.rev - self.cogs, 2)
+        # BF er nettobasert: Price er inkl. mva, Cost eks. mva -- validert
+        # mot juni-deckets BF (avvik 0,2 %). BF% regnes av netto.
+        self.bf = round(self.rev / 1.25 - self.cogs, 2)
         self.rab = round(q * float(r["Discount"] or 0), 2)
         self.full = round(q * float(r["FullPrice"] or 0), 2)
         self.brand = r.get("Brand") or "(ukjent)"
@@ -265,7 +269,8 @@ def agg(lines, key):
 
 
 def bfp(a) -> float:
-    return a["bf"] / a["rev"] * 100 if a["rev"] else 0.0
+    netto = a["rev"] / 1.25
+    return a["bf"] / netto * 100 if netto else 0.0
 
 
 def store_table(rows, maxrev, cols=("rev", "bf", "bfp", "trans", "snitt", "ppk")):
@@ -619,6 +624,8 @@ def main():
     ap.add_argument("--from", dest="dfrom", required=True)
     ap.add_argument("--to", dest="dto", required=True, help="exclusive")
     ap.add_argument("--outdir", default=str(ROOT / "reports"))
+    ap.add_argument("--seller-min", type=int, default=None,
+                    help="min transaksjoner for beste selger (100 = deckets terskel)")
     ap.add_argument("--only", default=None,
                     help="comma-separated report numbers, e.g. 03,04,05,06")
     args = ap.parse_args()
@@ -628,7 +635,13 @@ def main():
     async def fetch():
         c = FrontSystemsClient(load_config())
         try:
-            return await c.fetch("Saleslines", date_range("SaleDate", d0, d1), SELECT)
+            # from/to are the endpoint's own (undocumented) window parameters;
+            # without them Saleslines serves only a recent default window.
+            # 'to' is inclusive, our --to is exclusive.
+            last = d1 - dt.timedelta(days=1)
+            return await c.fetch_raw("Saleslines", {
+                "from": f"'{d0}'", "to": f"'{last}'",
+                "$select": ",".join(SELECT), "$top": "2000000"})
         finally:
             await c.aclose()
 
@@ -648,9 +661,12 @@ def main():
         print(f"  note: {dropped} lines from unmapped stocks excluded", file=sys.stderr)
     last_day = (d1 - dt.timedelta(days=1)).strftime("%d.%m.%Y").lstrip("0")
     first_day = d0.strftime("%d.%m.%Y").lstrip("0")
-    window_note = (f"Linjedata {first_day} &ndash; {last_day} &mdash; f&oslash;rste "
-                   f"periode med varelinjer i API-et. {len(kept):,} linjer."
+    window_note = (f"Linjedata {first_day} &ndash; {last_day}. "
+                   f"{len(kept):,} varelinjer."
                    ).replace(",", " ")
+    global SELLER_MIN_TRANS
+    if args.seller_min:
+        SELLER_MIN_TRANS = args.seller_min
     only = set(args.only.split(",")) if args.only else None
     build_all(kept, window_note, outdir, only=only)
     ch = agg(kept, lambda l: "x")["x"]

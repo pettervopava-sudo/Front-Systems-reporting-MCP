@@ -98,9 +98,12 @@ def main() -> None:
     reports = ROOT / "reports"
     out = pathlib.Path(args.out or reports / f"Manedsrapport_{mnd}_{ry}.pdf")
 
+    line_parts = [reports / f"{nn}.html" for nn in
+                  ("03_Sesonger", "04_Rabatter", "05_Merker", "06_Selgere")]
+    middle = line_parts if all(f.exists() for f in line_parts) else [None]
     parts = [reports / f"01_Manedsrapport_{mnd}_{ry}.html",
              reports / "02_Omsetning_og_BF.html",
-             None,  # placeholder: the 03-06 explanatory page
+             *middle,
              reports / "07_Diverse.html"]
 
     def combine_html(contents, out_html):
@@ -139,7 +142,10 @@ def main() -> None:
                 content = part.read_text(encoding="ascii")
             # For juli: 02/07 on disk are the juli-frame versions; assert no
             # later-period leakage before binding them into the document.
-            leaks = re.findall(r"2026-0[89]|2026-1[0-2]|august", content, re.I)
+            # case-sensitive: the month is lowercase in running Norwegian
+            # text, while "August" with capital A is a common given name --
+            # a top seller named August must not trip the period gate.
+            leaks = re.findall(r"2026-0[89]|2026-1[0-2]|august|August 2026", content)
             if leaks:
                 raise SystemExit(f"period leakage in part {i+1}: {set(leaks)}")
             contents.append(content)

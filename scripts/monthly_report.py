@@ -154,6 +154,25 @@ def build_reg_to_store(entries):
     return reg_to_store, excluded_regs
 
 
+def linjeagg(month_list):
+    """Sum line aggregates over months; None if any month is missing.
+
+    BF is netto-based: BF = rev/1.25 - cost (Price incl VAT, Cost excl) --
+    validated against the June-2026 deck (17,548 vs deck 17,581 TNOK, 0.2%).
+    """
+    tot = {"rev": 0.0, "cost": 0.0, "rab": 0.0}
+    for y, m in month_list:
+        f = CACHE / f"linjeagg_{y:04d}-{m:02d}.json"
+        if not f.exists():
+            return None
+        d = json.load(open(f))
+        for k in tot:
+            tot[k] += d[k]
+    tot["bf"] = tot["rev"] / VAT - tot["cost"]
+    tot["netto"] = tot["rev"] / VAT
+    return tot
+
+
 class Agg:
     """Per-store [trans, revenue] over a set of months, deck conventions applied."""
 
@@ -221,6 +240,14 @@ def main():
     r24_start = (r12_start[0] - 1, r12_start[1])
     r24_12 = A(list(month_iter(r24_start, r12_start)))
 
+    la = {
+        "m": linjeagg([(ry, rm)]), "pm": linjeagg([(ry - 1, rm)]),
+        "ytd": linjeagg([(ry, x) for x in range(1, rm + 1)]),
+        "pytd": linjeagg([(ry - 1, x) for x in range(1, rm + 1)]),
+        "r12": linjeagg(list(month_iter(r12_start, nxt))),
+        "r24": linjeagg(list(month_iter(r24_start, r12_start))),
+    }
+
     # Månedsvis matrix, post-exclusion
     matrix = {}
     for y in (ry - 2, ry - 1, ry):
@@ -285,7 +312,7 @@ def main():
         ytd=ytd, ytd_prev=ytd_prev, r12=r12, r24_12=r24_12, matrix=matrix,
         store_rows=store_rows, top_days_now=top_days_now,
         top_days_prev=top_days_prev, singles=singles,
-        reg_to_store=reg_to_store, juni_delta=delta, nxt=nxt,
+        reg_to_store=reg_to_store, juni_delta=delta, nxt=nxt, la=la,
     )
     if not page.isascii():
         raise SystemExit("output not pure ASCII — would mojibake on a non-UTF-8 surface")
@@ -321,15 +348,44 @@ def render(**k):
             f"<td class='num r'>{pct_metric(label, ytd, ytd_prev)}</td>"
             f"<td class='num r'>{f(r12)}</td><td class='num r'>{f(r24)}</td>"
             f"<td class='num r'>{pct_metric(label, r12, r24)}</td></tr>")
-    # All figures in a month's report must be that month's own, except
-    # historical comparison periods (prior years, YTD, rolling). Another
-    # month's BF/rabatt figures may not stand in for the report month
-    # (user rule, 2026-08-12) -- state unavailability instead.
+    la = k["la"]
     bf_block = ""
-    for label in ("BF i kroner", "BF %", "Rabatt i kroner"):
-        kpi_rows += (f"<tr class='na'><td>{esc(label)}</td>"
-                     + "<td class='r' colspan='9'>ikke tilgjengelig &mdash; "
-                       "API-et har ingen varelinjedata for perioden</td></tr>")
+    if all(la.values()):
+        def bfr(a): return nf(a["bf"])
+        def bfp(a): return (f"{a['bf']/a['netto']*100:.1f} %".replace(".", ",")
+                            ).encode("ascii", "xmlcharrefreplace").decode()
+        def pstp(a, b):
+            d = (a["bf"]/a["netto"] - b["bf"]/b["netto"]) * 100
+            return (f"{d:+.1f} pstp.".replace(".", ",", 1)
+                    ).encode("ascii", "xmlcharrefreplace").decode()
+        trip = lambda f_, a, b, chg: (f"<td class='num r'>{f_(a)}</td>"
+                                      f"<td class='num r'>{f_(b)}</td>"
+                                      f"<td class='num r'>{chg}</td>")
+        kpi_rows += ("<tr><td>BF i kroner</td>"
+            + trip(bfr, la["m"], la["pm"], pct(la["m"]["bf"], la["pm"]["bf"]))
+            + trip(bfr, la["ytd"], la["pytd"], pct(la["ytd"]["bf"], la["pytd"]["bf"]))
+            + trip(bfr, la["r12"], la["r24"], pct(la["r12"]["bf"], la["r24"]["bf"]))
+            + "</tr>")
+        kpi_rows += ("<tr><td>BF %</td>"
+            + trip(bfp, la["m"], la["pm"], pstp(la["m"], la["pm"]))
+            + trip(bfp, la["ytd"], la["pytd"], pstp(la["ytd"], la["pytd"]))
+            + trip(bfp, la["r12"], la["r24"], pstp(la["r12"], la["r24"]))
+            + "</tr>")
+        rab = lambda a: nf(a["rab"])
+        kpi_rows += ("<tr><td>Rabatt i kroner</td>"
+            + trip(rab, la["m"], la["pm"], pct(la["m"]["rab"], la["pm"]["rab"]))
+            + trip(rab, la["ytd"], la["pytd"], pct(la["ytd"]["rab"], la["pytd"]["rab"]))
+            + trip(rab, la["r12"], la["r24"], pct(la["r12"]["rab"], la["r24"]["rab"]))
+            + "</tr>")
+        kpi_rows += ("<tr class='na'><td></td><td class='r' colspan='9'>"
+            + "BF = netto omsetning (eks. mva) minus varekost; BF % av netto. "
+            + "Linjedata hentet med from/to-parametrene."
+            + "</td></tr>")
+    else:
+        for label in ("BF i kroner", "BF %", "Rabatt i kroner"):
+            kpi_rows += (f"<tr class='na'><td>{esc(label)}</td>"
+                         + "<td class='r' colspan='9'>ikke tilgjengelig &mdash; "
+                           "API-et har ingen varelinjedata for perioden</td></tr>")
 
     max_rev = max(r[3][1] for r in k["store_rows"]) or 1
     store_rows = ""
