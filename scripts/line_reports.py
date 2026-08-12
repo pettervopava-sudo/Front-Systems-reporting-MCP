@@ -124,7 +124,8 @@ table{width:100%;border-collapse:collapse;font-size:13.5px;}
 th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--stone);font-weight:600;padding:0 12px 6px 0;white-space:nowrap;
   border-bottom:1px solid var(--hair);}
-th.r,td.r{text-align:right;padding-right:0;}
+th.r,td.r{text-align:right;padding-left:16px;}
+th:last-child,td:last-child{padding-right:0;}
 td{padding:6px 10px 6px 0;border-bottom:1px solid var(--hair2);}
 td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
 tr.total td{font-weight:700;border-top:1px solid var(--ink);border-bottom:none;}
