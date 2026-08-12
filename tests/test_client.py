@@ -141,3 +141,17 @@ async def test_no_sleep_after_the_final_attempt(client, monkeypatch):
         await client.fetch("Sales", ["STOREID_FK eq 1"], ["SALEID"])
     assert route.call_count == MAX_ATTEMPTS
     assert len(slept) == MAX_ATTEMPTS - 1, "the doomed final attempt must not sleep"
+
+
+@respx.mock
+async def test_window_emits_inclusive_from_to_params(client):
+    """window=(start, end_exclusive) becomes the endpoint's own from/to
+    parameters, 'to' inclusive — the only way Saleslines serves history."""
+    import datetime as dt
+    route = respx.get(URL).mock(return_value=httpx.Response(200, json={"value": []}))
+    await client.fetch("Sales", ["STOREID_FK eq 1"], ["SALEID"],
+                       window=(dt.date(2026, 7, 1), dt.date(2026, 8, 1)))
+    q = dict(route.calls.last.request.url.params)
+    assert q["from"] == "'2026-07-01'"
+    assert q["to"] == "'2026-07-31'"
+    assert q["$top"] == "2000000"

@@ -1,6 +1,6 @@
 import datetime as dt
 import pytest
-from front_systems_mcp.coverage import LINES_HISTORY_START, Coverage, describe
+from front_systems_mcp.coverage import Coverage, describe
 
 
 def rows_on(*days: str) -> list[dict]:
@@ -26,24 +26,8 @@ def test_empty_result_warns_rather_than_implying_no_trade():
     assert any("0 rows" in w for w in cov.warnings)
 
 
-def test_saleslines_before_history_start_recommends_the_sales_table():
-    cov = describe(
-        [], dt.date(2026, 7, 1), dt.date(2026, 8, 1), entity="Saleslines",
-    )
-    joined = " ".join(cov.warnings)
-    assert "2026-08-01" in joined
-    # Assert the actionable recommendation itself. "Sales" alone is a substring of
-    # "Saleslines", so it would pass even with the recommendation deleted.
-    assert "Use Sales" in joined
 
 
-def test_sales_before_history_start_is_not_warned():
-    # Sales headers reach back years; only Saleslines is limited.
-    cov = describe(
-        rows_on("2026-07-01"), dt.date(2026, 7, 1), dt.date(2026, 7, 2),
-        entity="Sales",
-    )
-    assert not any("2026-08-01" in w for w in cov.warnings)
 
 
 def test_data_starting_later_than_requested_is_flagged():
@@ -61,10 +45,6 @@ def test_summary_mentions_the_actual_span():
     assert "2026-08-01" in cov.summary() and "2026-08-02" in cov.summary()
 
 
-@pytest.mark.parametrize("entity", ["Saleslines", "saleslines", "SALESLINES"])
-def test_pre_history_warning_survives_entity_casing(entity):
-    cov = describe([], dt.date(2026, 7, 1), dt.date(2026, 8, 1), entity=entity)
-    assert any("2026-08-01" in w for w in cov.warnings)
 
 
 def test_one_unreadable_date_does_not_abort_the_report():

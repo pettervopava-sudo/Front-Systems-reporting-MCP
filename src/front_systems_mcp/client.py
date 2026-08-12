@@ -6,6 +6,7 @@ consistent pages. One request per query, with $top pinned high.
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import ssl
 from collections.abc import Sequence
 
@@ -60,8 +61,18 @@ class FrontSystemsClient:
         entity: str,
         filters: Sequence[str],
         select: Sequence[str],
+        window: tuple[dt.date, dt.date] | None = None,
     ) -> list[dict]:
+        """window=(start, end_exclusive) sets the endpoint's own from/to
+        parameters (user-discovered). Saleslines serves only a recent default
+        window without them; 'to' is inclusive on the wire, so end-1 day is
+        sent. Filters still validate through build_params and combine with
+        the window server-side (verified live)."""
         params = build_params(filters, select)
+        if window is not None:
+            start, end = window
+            params["from"] = f"'{start}'"
+            params["to"] = f"'{end - dt.timedelta(days=1)}'"
         url = f"{self._config.base_url}/odata/{entity}"
         last: Exception | None = None
 

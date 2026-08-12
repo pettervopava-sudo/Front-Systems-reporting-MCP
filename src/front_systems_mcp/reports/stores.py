@@ -11,8 +11,7 @@ import datetime as dt
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from ..coverage import LINES_HISTORY_START
-from ..odata import date_range
+from ..odata import date_range  # noqa: F401  (kept for callers)
 
 SELECT = ["Stock", "Store", "STOCKID_FK", "STOREID_FK"]
 
@@ -33,12 +32,12 @@ class StoreEntry:
 async def harvest(client, days: int = 30, today: dt.date | None = None) -> list[StoreEntry]:
     today = today or dt.date.today()
     since = today - dt.timedelta(days=days)
-    rows = await client.fetch("Saleslines", date_range("SaleDate", since, None), SELECT)
+    rows = await client.fetch("Saleslines", [], SELECT,
+                              window=(since, today + dt.timedelta(days=1)))
     if not rows:
         raise ValueError(
-            f"No sales lines in the last {days} days, so no store map could be "
-            f"built. Saleslines holds no data before {LINES_HISTORY_START}; "
-            "widen the window, or use Sales with known register ids."
+            f"No sales lines in the last {days} days, so no store map could "
+            "be built. Widen the window, or use Sales with known register ids."
         )
 
     grouped: dict[int, StoreEntry] = {}

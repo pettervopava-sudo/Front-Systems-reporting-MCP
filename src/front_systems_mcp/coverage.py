@@ -9,9 +9,6 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass, field
 
-LINES_HISTORY_START = dt.date(2026, 8, 1)
-
-
 @dataclass
 class Coverage:
     requested_from: dt.date
@@ -60,13 +57,6 @@ def describe(
     missing = [d for d in span if d not in set(seen)]
     warnings: list[str] = []
 
-    if entity.casefold() == "saleslines" and requested_from < LINES_HISTORY_START:
-        warnings.append(
-            f"Saleslines holds no data before {LINES_HISTORY_START}; "
-            f"{requested_from} was requested. Use Sales for earlier periods "
-            "(revenue and transaction counts, but no product, unit or margin "
-            "detail)."
-        )
     if unreadable_count > 0:
         warnings.append(
             f"{unreadable_count} row(s) had an unreadable {date_field} and "

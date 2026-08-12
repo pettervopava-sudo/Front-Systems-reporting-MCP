@@ -9,8 +9,8 @@ FIXTURE = Path(__file__).parent / "fixtures" / "saleslines_sample.json"
 
 class FakeClient:
     def __init__(self, rows): self.rows, self.calls = rows, []
-    async def fetch(self, entity, filters, select):
-        self.calls.append((entity, list(filters), list(select)))
+    async def fetch(self, entity, filters, select, window=None):
+        self.calls.append((entity, list(filters), list(select), window))
         return self.rows
 
 
@@ -34,12 +34,13 @@ async def test_sorted_by_activity():
     assert entries[0].stock_id == 3229
 
 
-async def test_queries_saleslines_with_a_date_filter():
+async def test_queries_saleslines_with_a_window():
     client = FakeClient(ROWS)
     await harvest(client, days=7, today=dt.date(2026, 8, 11))
-    entity, filters, select = client.calls[0]
+    entity, filters, select, window = client.calls[0]
     assert entity == "Saleslines"
-    assert any("SaleDate ge datetime'2026-08-04T00:00:00'" == f for f in filters)
+    assert window == (dt.date(2026, 8, 4), dt.date(2026, 8, 12))
+    assert filters == []
     assert "Stock" in select and "STOCKID_FK" in select
 
 
@@ -59,7 +60,7 @@ async def test_resolve_returns_all_ambiguous_matches():
 async def test_empty_harvest_raises_with_guidance():
     with pytest.raises(ValueError) as exc:
         await harvest(FakeClient([]), days=30, today=dt.date(2026, 8, 11))
-    assert "2026-08-01" in str(exc.value)
+    assert "Widen the window" in str(exc.value)
 
 
 async def test_harvest_against_real_fixture():

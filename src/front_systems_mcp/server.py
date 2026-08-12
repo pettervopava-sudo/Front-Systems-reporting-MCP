@@ -122,9 +122,10 @@ async def sales_report(
     """Sales revenue, units and margin for a period.
 
     Dates are ISO YYYY-MM-DD; date_to is exclusive. Give stock_id (preferred,
-    from list_stores) for product-level detail. Periods before 2026-08-01 fall
-    back to transaction headers, which have no product, unit or margin data.
-    Output may include "excel" and "chart".
+    from list_stores) for product-level detail with margin -- line history
+    reaches back to 2022 via the endpoint's window parameters. Without a
+    stock_id the report is served from transaction headers (no product,
+    unit or margin data). Output may include "excel" and "chart".
     """
     result = await sales_report_mod.sales_report(
         get_client(),

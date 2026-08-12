@@ -12,7 +12,9 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from ..coverage import LINES_HISTORY_START, Coverage, describe
+VAT = 1.25  # Price is VAT-inclusive, Cost is VAT-exclusive
+
+from ..coverage import Coverage, describe
 from ..odata import any_of, date_range, eq
 
 LINE_SELECT = [
@@ -52,7 +54,10 @@ def lines_to_frame(rows: list[dict]) -> pd.DataFrame:
     # Price, so multiplying is what makes a return subtract.
     frame["LineTotal"] = (qty * _numeric(frame, "Price")).round(2)
     frame["LineCost"] = (qty * _numeric(frame, "Cost")).round(2)
-    frame["LineMargin"] = (frame["LineTotal"] - frame["LineCost"]).round(2)
+    # BF is netto-based: Price includes VAT, Cost does not. Validated against
+    # the chain's own June-2026 report (0.2% off); LineTotal - LineCost mixes
+    # VAT bases and overstates margin.
+    frame["LineMargin"] = (frame["LineTotal"] / VAT - frame["LineCost"]).round(2)
     frame["day"] = frame["SaleDate"].astype(str).str[:10]
     if "Currency" not in frame:
         frame["Currency"] = "UNKNOWN"
@@ -88,8 +93,8 @@ def _validate_group_by(frame: pd.DataFrame, group_by: Sequence[str]) -> None:
         raise ValueError(
             f"Cannot group by {unknown!r}: not present in this data. Available "
             f"keys for this source: {sorted(available)}. Product dimensions "
-            "such as Brand need line-level data — pass a stock_id and a period "
-            f"from {LINES_HISTORY_START} onward so sales_report uses Saleslines."
+            "such as Brand need line-level data — pass a stock_id so "
+            "sales_report uses Saleslines."
         )
 
 
@@ -170,16 +175,20 @@ async def sales_report(
     Saleslines gives product detail but starts 2026-08-01; Sales reaches back
     years but has no product, unit or cost columns.
     """
-    use_lines = prefer_lines and date_from >= LINES_HISTORY_START and stock_id is not None
+    use_lines = prefer_lines and stock_id is not None
 
     if use_lines:
-        filters = [*date_range("SaleDate", date_from, date_to), eq("STOCKID_FK", stock_id)]
+        # The date range travels as the endpoint's own from/to window (the only
+        # way Saleslines serves history); remaining filters combine with it
+        # server-side, verified live.
+        filters = [eq("STOCKID_FK", stock_id)]
         if register_ids:
             # Both constraints must hold: stock_id narrows to the shop,
             # register_ids narrows further to specific tills within it. Dropping
             # this clause silently widens a till-level question to shop-wide.
             filters.append(any_of("STOREID_FK", list(register_ids)))
-        rows = await client.fetch("Saleslines", filters, LINE_SELECT)
+        rows = await client.fetch("Saleslines", filters, LINE_SELECT,
+                                  window=(date_from, date_to))
         frame = lines_to_frame(rows)
         coverage = describe(rows, date_from, date_to, entity="Saleslines")
         source = "Saleslines"
@@ -201,6 +210,12 @@ async def sales_report(
         rows = await client.fetch("Sales", filters, HEADER_SELECT)
         frame = headers_to_frame(rows)
         coverage = describe(rows, date_from, date_to, entity="Sales")
+        if stock_id is None:
+            coverage.warnings.append(
+                "No stock_id was given, so the report is served from Sales "
+                "headers with no product, unit or margin detail. Pass a "
+                "stock_id from list_stores for the line-level view."
+            )
         source = "Sales"
         # headers_to_frame's Currency is always a single synthetic "UNKNOWN"
         # marker (Sales carries no real currency column), so this can never
@@ -218,25 +233,6 @@ async def sales_report(
         # "no product breakdown available" answer from a "no product
         # breakdown exists" one. Only relevant when part of the period could
         # have used Saleslines at all (i.e. it reaches 2026-08-01 or later).
-        if prefer_lines and date_to > LINES_HISTORY_START:
-            if stock_id is None:
-                coverage.warnings.append(
-                    "No stock_id was given, so this period (which reaches "
-                    f"{LINES_HISTORY_START} or later) was served entirely from "
-                    "Sales headers, with no product, unit or margin detail. "
-                    "Pass a stock_id to use Saleslines for the part of the "
-                    "range on or after that date."
-                )
-            elif date_from < LINES_HISTORY_START:
-                coverage.warnings.append(
-                    f"Line-level data exists only from {LINES_HISTORY_START} "
-                    f"onward, so this entire request ({date_from}..{date_to}) "
-                    "was served from Sales headers with no product, unit or "
-                    "margin detail, even though a stock_id was given. Split "
-                    f"the request at {LINES_HISTORY_START} and query "
-                    "Saleslines separately for the part from that date onward "
-                    "if product detail is wanted."
-                )
 
     if totals.get("transactions") and isinstance(totals.get("revenue"), (int, float)):
         # avg_basket divides revenue, so it is just as meaningless as a

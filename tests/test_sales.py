@@ -12,8 +12,8 @@ FIX = Path(__file__).parent / "fixtures"
 
 class FakeClient:
     def __init__(self, by_entity): self.by_entity, self.calls = by_entity, []
-    async def fetch(self, entity, filters, select):
-        self.calls.append((entity, list(filters), list(select)))
+    async def fetch(self, entity, filters, select, window=None):
+        self.calls.append((entity, list(filters), list(select), window))
         return self.by_entity.get(entity, [])
 
 
@@ -38,15 +38,16 @@ def test_multi_unit_lines_multiply():
     assert frame["LineTotal"].sum() == 300.0
 
 
-def test_margin_uses_qty_for_both_price_and_cost():
+def test_margin_is_netto_based():
+    # BF = brutto/1.25 - cost: Price includes VAT, Cost does not. 2*(80-40)=80.
     frame = lines_to_frame([line(2, 100.0, cost=40.0)])
     assert frame["LineCost"].sum() == 80.0
-    assert frame["LineMargin"].sum() == 120.0
+    assert frame["LineMargin"].sum() == 80.0
 
 
 def test_returns_reverse_margin_too():
     frame = lines_to_frame([line(-1, 100.0, cost=40.0)])
-    assert frame["LineMargin"].sum() == -60.0
+    assert frame["LineMargin"].sum() == -40.0
 
 
 def test_headers_exclude_voided():
@@ -82,7 +83,8 @@ def test_currencies_are_never_summed_together():
     assert len(out) == 2
 
 
-async def test_report_uses_headers_for_periods_before_line_history():
+async def test_report_uses_headers_when_no_stock_id_is_given():
+    # register_ids alone cannot reach the lines path; headers serve the report.
     client = FakeClient({"Sales": [
         {"SALEID": 1, "Total": 100.0, "IsVoided": False, "SaleDate": "2026-07-05T00:00:00"},
     ]})
@@ -93,6 +95,20 @@ async def test_report_uses_headers_for_periods_before_line_history():
     assert client.calls[0][0] == "Sales"
     assert result.totals["revenue"] == 100.0
     assert "Qty" not in result.frame.columns  # headers carry no unit data
+
+
+async def test_old_periods_use_lines_when_stock_id_given():
+    # Line history reaches 2022 via the endpoint's window parameters, so an
+    # old period with a stock_id is served from Saleslines, windowed.
+    client = FakeClient({"Saleslines": [line(1, 100.0, day="2026-07-05")]})
+    result = await sales_report(
+        client, dt.date(2026, 7, 1), dt.date(2026, 8, 1), stock_id=3229,
+    )
+    assert result.source == "Saleslines"
+    entity, filters, _, window = client.calls[0]
+    assert entity == "Saleslines"
+    assert window == (dt.date(2026, 7, 1), dt.date(2026, 8, 1))
+    assert not any("SaleDate" in f for f in filters)  # the window IS the range
 
 
 async def test_report_uses_lines_when_period_allows_and_stock_given():
@@ -107,7 +123,7 @@ async def test_report_uses_lines_when_period_allows_and_stock_given():
 async def test_report_never_selects_pii():
     client = FakeClient({"Saleslines": [line(1, 100.0, day="2026-08-02")]})
     await sales_report(client, dt.date(2026, 8, 1), dt.date(2026, 8, 5), stock_id=3229)
-    _, _, select = client.calls[0]
+    _, _, select, _ = client.calls[0]
     assert not ({"Email", "Phone", "FirstName", "Address"} & set(select))
 
 
@@ -134,15 +150,12 @@ async def test_header_fallback_without_stock_id_is_warned():
     assert any("stock" in w.lower() for w in result.coverage.warnings)
 
 
-async def test_period_straddling_line_history_is_warned():
-    client = FakeClient({"Sales": [
-        {"SALEID": 1, "Total": 100.0, "IsVoided": False, "SaleDate": "2026-07-28T00:00:00"},
-    ]})
+async def test_period_straddling_months_uses_lines_with_stock_id():
+    client = FakeClient({"Saleslines": [line(1, 100.0, day="2026-07-28")]})
     result = await sales_report(
         client, dt.date(2026, 7, 25), dt.date(2026, 8, 10), stock_id=3229,
     )
-    assert result.source == "Sales"
-    assert any("2026-08-01" in w for w in result.coverage.warnings)
+    assert result.source == "Saleslines"
 
 
 def test_units_is_not_a_row_count_for_header_data():
@@ -180,7 +193,7 @@ async def test_register_ids_narrow_the_lines_path_instead_of_being_dropped():
         client, dt.date(2026, 8, 1), dt.date(2026, 8, 5),
         stock_id=3229, register_ids=[3530],
     )
-    entity, filters, _ = client.calls[0]
+    entity, filters, _, _w = client.calls[0]
     assert entity == "Saleslines"
     assert any("STOCKID_FK eq 3229" in f for f in filters)
     assert any("STOREID_FK eq 3530" in f for f in filters), (
