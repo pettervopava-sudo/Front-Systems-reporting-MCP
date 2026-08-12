@@ -89,6 +89,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--month", default="2026-07")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--html", action="store_true",
+                    help="also write the bound suite as one HTML file")
     args = ap.parse_args()
     ry, rm = int(args.month[:4]), int(args.month[5:7])
     import monthly_report as MR
@@ -101,9 +103,33 @@ def main() -> None:
              None,  # placeholder: the 03-06 explanatory page
              reports / "07_Diverse.html"]
 
+    def combine_html(contents, out_html):
+        """One self-contained page from the parts, same order as the PDF.
+
+        Each part carries an identical <style> and its own <script> with the
+        same const names; keep one stylesheet, scope every script in a bare
+        block so const declarations cannot collide, and keep one #tip div.
+        """
+        pieces = []
+        for i, c in enumerate(contents):
+            if i > 0:
+                c = re.sub(r"<title>.*?</title>", "", c, count=1, flags=re.S)
+                c = re.sub(r"<style>.*?</style>", "", c, count=1, flags=re.S)
+            c = c.replace('<div id="tip" role="status" aria-live="polite"></div>', "")
+            c = c.replace("<script>", "<script>{").replace("</script>", "}</script>")
+            pieces.append(c)
+        page = ("\n".join(pieces)
+                + '<div id="tip" role="status" aria-live="polite"></div>'
+                + "<style>.suite{display:none}</style>")
+        if not page.isascii():
+            raise SystemExit("combined HTML not pure ASCII")
+        out_html.write_text(page, encoding="ascii")
+        print(f"  html: {out_html} ({out_html.stat().st_size:,} bytes)",
+              file=sys.stderr)
+
     with tempfile.TemporaryDirectory() as td:
         tdp = pathlib.Path(td)
-        pdfs = []
+        pdfs, contents = [], []
         for i, part in enumerate(parts):
             if part is None:
                 content = unavailable_page(mnd, ry)
@@ -116,6 +142,7 @@ def main() -> None:
             leaks = re.findall(r"2026-0[89]|2026-1[0-2]|august", content, re.I)
             if leaks:
                 raise SystemExit(f"period leakage in part {i+1}: {set(leaks)}")
+            contents.append(content)
             html = tdp / f"part{i}.html"
             html.write_text(print_shell(content), encoding="ascii",
                             errors="strict")
@@ -130,6 +157,8 @@ def main() -> None:
             writer.append(str(pdf))
         with open(out, "wb") as fh:
             writer.write(fh)
+    if args.html:
+        combine_html(contents, out.with_suffix(".html"))
     from pypdf import PdfReader
     pages = len(PdfReader(str(out)).pages)
     print(f"  merged: {out} ({pages} pages, {out.stat().st_size:,} bytes)",
