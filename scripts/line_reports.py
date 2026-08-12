@@ -209,7 +209,7 @@ def page(current, no, title, window_note, body, foot_extra="") -> str:
     <code>SUM(Qty &times; (Price &minus; Cost))</code>; returer (Qty = &minus;1)
     trekkes fra. BMB er utelatt, som i m&aring;nedsrapporten. Kundedata hentes ikke.</div>
   {foot_extra}
-  <div>Generert {dt.date.today().isoformat()} &middot; <code>scripts/line_reports.py</code></div>
+  <div>Rapportserie H&Oslash;YER-kjeden &middot; <code>scripts/line_reports.py</code></div>
 </footer>
 </div>
 <div id="tip" role="status" aria-live="polite"></div>

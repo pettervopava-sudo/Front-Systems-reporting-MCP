@@ -323,8 +323,8 @@ def render(**k):
             f"<td class='num r'>{pct_metric(label, r12, r24)}</td></tr>")
     for label in ("BF i kroner", "BF %", "Rabatt i kroner"):
         kpi_rows += (f"<tr class='na'><td>{esc(label)}</td>"
-                     + "<td class='r' colspan='9'>ikke tilgjengelig før "
-                       "august-rapporten (linjedata starter 2026-08-01)</td></tr>"
+                     + "<td class='r' colspan='9'>ikke tilgjengelig &mdash; API-et har "
+                       "ingen varelinjedata for perioden</td></tr>"
                      ).encode("ascii", "xmlcharrefreplace").decode()
 
     max_rev = max(r[3][1] for r in k["store_rows"]) or 1

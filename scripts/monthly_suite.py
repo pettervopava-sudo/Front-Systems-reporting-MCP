@@ -74,14 +74,12 @@ def main():
 
     closed_note = ""
     for store, when in getattr(MR, "STORE_CLOSED", {}).items():
-        closed_note += (f" {esc(store)} ble avviklet {esc(when)} og inng&aring;r "
-                        f"i alle perioder butikken var i drift.")
+        closed_note += (f" {esc(store)} er avviklet og inng&aring;r i alle "
+                        f"perioder butikken var i drift.")
 
-    unavailable = (f"Krever varelinjedata, som API-et f&oslash;rst inneholder fra "
-                   f"<code>2026-08-01</code>. For {mnd} {ry} kan denne delen derfor "
-                   f"ikke lages fra API-et &mdash; tallene finnes kun i BI-verkt&oslash;yet "
-                   f"bak PPT-rapporten. Fra og med august-utgaven produseres delen "
-                   f"automatisk.")
+    unavailable = (f"Krever varelinjedata, som ikke finnes i API-et for {mnd} {ry} "
+                   f"eller tidligere perioder. Tallene for denne delen finnes kun i "
+                   f"BI-verkt&oslash;yet bak PPT-rapporten.")
 
     files = {}
 
@@ -131,8 +129,7 @@ def main():
   <tbody>{rows}</tbody></table></div></section>
 <div class="note"><strong>BF pr butikk</strong> ({esc(mnd)}-kolonnene i
   PPT-rapporten) krever varelinjedata og kan ikke beregnes for {esc(mnd)} {ry}
-  fra API-et &mdash; linjedata finnes fra 01.08.2026. Salgsheadere har ingen
-  kostpris.</div>
+  fra API-et. Salgsheadere har ingen kostpris.</div>
 <script>
 const D={chart};{LR.TIP_JS}
 const NS="http://www.w3.org/2000/svg";
@@ -171,7 +168,7 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
         items = "".join(f"<li>{c}</li>" for c in contents)
         body = f"""<div class="note"><strong>Ikke tilgjengelig for {esc(mnd)} {ry}.</strong>
   {unavailable}</div>
-<section><div class="shead"><h2>Innhold fra august-utgaven</h2></div>
+<section><div class="shead"><h2>Denne delen inneholder normalt</h2></div>
 <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;
   font-size:13.5px;color:var(--ink2);">{items}</ul></section>"""
         files[fname] = page(fname, no, title, window, body)
