@@ -19,3 +19,6 @@ venv/
 out/
 
 .DS_Store
+
+# Generated reports and monthly cache
+reports/
