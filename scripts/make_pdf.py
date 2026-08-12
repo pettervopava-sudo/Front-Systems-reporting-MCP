@@ -122,7 +122,7 @@ def main() -> None:
                 c = re.sub(r"<style>.*?</style>", "", c, count=1, flags=re.S)
             c = c.replace('<div id="tip" role="status" aria-live="polite"></div>', "")
             c = c.replace("<script>", "<script>{").replace("</script>", "}</script>")
-            pieces.append(f'<div id="{aid}"></div>' + c)
+            pieces.append(f'<div class="part" id="{aid}">' + c + "</div>")
         page = ("\n".join(pieces)
                 + '<div id="tip" role="status" aria-live="polite"></div>')
         # nav file links -> anchors (every suite filename, wherever it appears)
@@ -131,9 +131,26 @@ def main() -> None:
             aid = f"del-{fname[:2]}"
             target = aid if aid in seen else "del-0306"
             page = page.replace(f'href="{fname}"', f'href="#{target}"')
-        page += ("<style>html{scroll-behavior:smooth}"
-                 "@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}"
-                 "</style>")
+        # Paged mode: one part visible at a time, the sticky menu switches
+        # pages via location.hash. Progressive enhancement -- without JS the
+        # parts simply flow after one another as before.
+        page += ("<style>"
+                 "body.paged .part{display:none}"
+                 "body.paged .part.active{display:block}"
+                 "</style>"
+                 "<script>{"
+                 "const parts=[...document.querySelectorAll('.part')];"
+                 "const ids=new Set(parts.map(p=>p.id));"
+                 "function show(){"
+                 "  const want=location.hash.slice(1);"
+                 "  const id=ids.has(want)?want:parts[0].id;"
+                 "  parts.forEach(p=>p.classList.toggle('active',p.id===id));"
+                 "  window.scrollTo({top:0,behavior:'auto'});"
+                 "}"
+                 "document.body.classList.add('paged');"
+                 "show();"
+                 "addEventListener('hashchange',show);"
+                 "}</script>")
         if not page.isascii():
             raise SystemExit("combined HTML not pure ASCII")
         out_html.write_text(page, encoding="ascii")
