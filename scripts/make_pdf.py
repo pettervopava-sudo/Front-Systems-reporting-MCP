@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Bind the månedsrapport suite into one PDF via headless Chrome.
+
+Wraps each report file in a print shell (forced light theme, A4 landscape,
+suite nav hidden), prints each to PDF with Chrome so the SVG charts render,
+and merges the parts with pypdf. For the July 2026 edition the line-data
+sections (03–06) are represented by a single explanatory page, since their
+on-disk versions cover a later window and may not appear in a July document.
+
+Usage:
+  python3 scripts/make_pdf.py --month 2026-07
+"""
+from __future__ import annotations
+
+import argparse
+import pathlib
+import re
+import subprocess
+import sys
+import tempfile
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+import line_reports as LR  # noqa: E402  (shared CSS for the insert page)
+
+CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+PRINT_CSS = """
+@page{size:A4 landscape;margin:9mm 10mm;}
+html{background:#fff;}
+.suite,#tip{display:none!important;}
+.wrap{padding:0;gap:26px;max-width:none;zoom:.88;}
+table{font-size:11px;}
+th{padding:0 9px 4px 0;}
+th.r,td.r{padding-left:10px;}
+td{padding:4px 9px 4px 0;}
+tr{break-inside:avoid;}
+section,.note,.kpis{break-inside:avoid-page;}
+.shead{break-after:avoid;}
+.mast{padding-bottom:14px;}
+.mast .no{font-size:56px;}
+.mast h1{font-size:30px;}
+.plot{break-inside:avoid;}
+/* the 14-column month matrix is wider than landscape A4 even zoomed; shrink
+   just that section's table so okt-des are not clipped off the page edge */
+section:has(svg#monthly) table{font-size:9px;}
+section:has(svg#monthly) th.r,section:has(svg#monthly) td.r{padding-left:6px;}
+section:has(svg#monthly) th{padding-right:6px;}
+"""
+
+
+def print_shell(content: str) -> str:
+    return ('<!doctype html><html data-theme="light"><head>'
+            '<meta charset="utf-8"><style>' + PRINT_CSS + "</style></head><body>"
+            + content + "</body></html>")
+
+
+def to_pdf(html_path: pathlib.Path, pdf_path: pathlib.Path) -> None:
+    cmd = [CHROME, "--headless", "--disable-gpu", "--no-pdf-header-footer",
+           "--virtual-time-budget=4000",
+           f"--print-to-pdf={pdf_path}", html_path.as_uri()]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if not pdf_path.exists():
+        raise SystemExit(f"Chrome failed for {html_path.name}: {res.stderr[-300:]}")
+
+
+def unavailable_page(mnd: str, ry: int) -> str:
+    body = f"""{LR.suite_nav("none")}
+<header class="mast">
+  <div class="no">3&ndash;6</div>
+  <div>
+    <div class="kicker">H&Oslash;YER-kjeden &middot; m&aring;nedsrapport</div>
+    <h1>Sesonger &middot; Rabatter &middot; Merker &middot; Selgere</h1>
+    <div class="win">Ikke tilgjengelig for {mnd} {ry}.</div>
+  </div>
+</header>
+<div class="note"><strong>Hvorfor.</strong> Disse delene krever varelinjedata,
+  som ikke finnes i API-et for {mnd} {ry} eller tidligere perioder. Tallene
+  finnes kun i BI-verkt&oslash;yet bak PPT-rapporten. Delene omfatter: salg og
+  BF fordelt p&aring; sesong; n&oslash;kkeltall rabatter; merker med
+  h&oslash;yest omsetning og n&oslash;kkeltall pr merke; plagg pr kunde (PPK)
+  pr butikk og beste selger (PPK/KPK). St&oslash;rste kunder utelates bevisst
+  &mdash; rapportserien henter ikke kundedata.</div>"""
+    return f"<title>Ikke tilgjengelig</title><style>{LR.CSS}</style>\n" \
+           f'<div class="wrap">{body}</div>'
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--month", default="2026-07")
+    ap.add_argument("--out", default=None)
+    args = ap.parse_args()
+    ry, rm = int(args.month[:4]), int(args.month[5:7])
+    import monthly_report as MR
+    mnd = MR.MND[rm - 1]
+    reports = ROOT / "reports"
+    out = pathlib.Path(args.out or reports / f"Manedsrapport_{mnd}_{ry}.pdf")
+
+    parts = [reports / f"01_Manedsrapport_{mnd}_{ry}.html",
+             reports / "02_Omsetning_og_BF.html",
+             None,  # placeholder: the 03-06 explanatory page
+             reports / "07_Diverse.html"]
+
+    with tempfile.TemporaryDirectory() as td:
+        tdp = pathlib.Path(td)
+        pdfs = []
+        for i, part in enumerate(parts):
+            if part is None:
+                content = unavailable_page(mnd, ry)
+            else:
+                if not part.exists():
+                    raise SystemExit(f"missing {part}")
+                content = part.read_text(encoding="ascii")
+            # For juli: 02/07 on disk are the juli-frame versions; assert no
+            # later-period leakage before binding them into the document.
+            leaks = re.findall(r"2026-0[89]|2026-1[0-2]|august", content, re.I)
+            if leaks:
+                raise SystemExit(f"period leakage in part {i+1}: {set(leaks)}")
+            html = tdp / f"part{i}.html"
+            html.write_text(print_shell(content), encoding="ascii",
+                            errors="strict")
+            pdf = tdp / f"part{i}.pdf"
+            to_pdf(html, pdf)
+            pdfs.append(pdf)
+            print(f"  part {i+1}: {pdf.stat().st_size:,} bytes", file=sys.stderr)
+
+        from pypdf import PdfWriter
+        writer = PdfWriter()
+        for pdf in pdfs:
+            writer.append(str(pdf))
+        with open(out, "wb") as fh:
+            writer.write(fh)
+    from pypdf import PdfReader
+    pages = len(PdfReader(str(out)).pages)
+    print(f"  merged: {out} ({pages} pages, {out.stat().st_size:,} bytes)",
+          file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
