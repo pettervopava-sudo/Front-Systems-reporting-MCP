@@ -73,6 +73,10 @@ STORE_STOCKS = {
     "Høyer Trondheim": [181, 2014], "Høyer Webshop": [183],
 }
 STORE_REG_EXTRAS = {"Høyer Bergen": [324, 340, 370, 373]}
+#: Stores with a known closure date: included in months they traded, excluded
+#: from later months, and footnoted. Bergen closed 2026-08-01 (user-confirmed),
+#: which is also why it has no Saleslines presence at all.
+STORE_CLOSED = {"Høyer Bergen": "2026-08-01"}
 EXCLUDED_STOCKS = {1333, 1901}          # BMB / BMB Shopify
 EXCLUDED_REGS = {3207}                  # Outlet Nydalen (antatt)
 MND = ["januar", "februar", "mars", "april", "mai", "juni", "juli",
