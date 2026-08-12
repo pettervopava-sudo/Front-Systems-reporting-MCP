@@ -83,6 +83,31 @@ def main():
 
     files = {}
 
+    # Web units, derived from the live stock map (user-confirmed taxonomy):
+    # 183 = the chain webstore; Shopify stocks are store-owned webstores that
+    # the chain's reporting merges into the eponymous physical store.
+    stock_regs = {e.stock_id: list(e.register_ids) for e in entries}
+    web_units = [
+        ("H&oslash;yer Webshop", "kjedens nettbutikk (egen linje over)",
+         stock_regs.get(183, [])),
+        ("H&oslash;yer Trondheim &mdash; nettbutikk", "Shopify; inng&aring;r i "
+         "H&oslash;yer Trondheim over", stock_regs.get(2014, [])),
+        ("H&oslash;yer Harstad &mdash; nettbutikk", "Shopify; inng&aring;r i "
+         "H&oslash;yer Harstad over", stock_regs.get(2794, [])),
+    ]
+
+    def reg_sum(months, regs):
+        n_t, s_t = 0, 0.0
+        for y, m in months:
+            d = MR.month_data(y, m)
+            if not d:
+                continue
+            for r in regs:
+                v = d["per_reg"].get(str(r))
+                if v:
+                    n_t += v[0]; s_t += v[1]
+        return n_t, s_t
+
     # ---- 02 Omsetning (og BF) pr butikk ------------------------------------
     names = sorted(set(MR.STORE_STOCKS) | set(MR.STORE_REG_EXTRAS),
                    key=lambda s: -this_m.stores.get(s, [0, 0])[1])
@@ -115,8 +140,22 @@ def main():
                          "c": round(this_m.stores.get(n, [0, 0])[1]),
                          "p": round(prev_y.stores.get(n, [0, 0])[1])}
                         for n in names], ensure_ascii=True)
+    web_rows = ""
+    for label, how, regs in web_units:
+        if not regs:
+            continue
+        n_c, s_c = reg_sum([(ry, rm)], regs)
+        n_p, s_p = reg_sum([(ry - 1, rm)], regs)
+        n_y, s_y = reg_sum([(ry, m) for m in range(1, rm + 1)], regs)
+        web_rows += (f"<tr><td>{label}</td><td>{how}</td>"
+                     f"<td class='num r'>{nf(s_c)}</td>"
+                     f"<td class='num r'>{nf(s_p)}</td>"
+                     f"<td class='num r'>{MR.pct(s_c, s_p)}</td>"
+                     f"<td class='num r'>{nf(n_c)}</td>"
+                     f"<td class='num r'>{nf(s_y)}</td></tr>")
+
     body = f"""<section><div class="shead"><h2>Omsetning pr butikk &mdash; {esc(mnd)}</h2>
-  <p>Shopify-salg er sl&aring;tt sammen med moderbutikken.{closed_note}</p></div>
+  <p>H&oslash;yer Webshop er kjedens nettbutikk. Butikkenes egne nettbutikker (Shopify) inng&aring;r i moderbutikkens tall &mdash; se egen tabell under.{closed_note}</p></div>
 <div class="legend"><span><i class="sw" style="background:var(--slate)"></i>{esc(mnd)} {ry-1}</span>
   <span><i class="sw" style="background:var(--ox)"></i>{esc(mnd)} {ry}</span></div>
 <div class="plot"><svg id="c" viewBox="0 0 1080 320" role="img"
@@ -127,6 +166,16 @@ def main():
     <th class="r">Endring</th><th class="r">Trans</th><th class="r">Snitt</th>
     <th class="r">Hittil i &aring;r</th><th class="r">Endr. HIA</th></tr></thead>
   <tbody>{rows}</tbody></table></div></section>
+<section><div class="shead"><h2>Nettbutikker</h2>
+  <p>Kjedens nettbutikk rapporteres som egen butikk; butikkenes egne
+     Shopify-nettbutikker inng&aring;r i moderbutikkens tall over og vises her
+     separat for synlighet.</p></div>
+<div class="tw"><table>
+  <thead><tr><th>Nettbutikk</th><th>Rapporteres som</th>
+    <th class="r">{esc(mnd)} {ry}</th><th class="r">{esc(mnd)} {ry-1}</th>
+    <th class="r">Endring</th><th class="r">Trans</th>
+    <th class="r">Hittil i &aring;r</th></tr></thead>
+  <tbody>{web_rows}</tbody></table></div></section>
 <div class="note"><strong>BF pr butikk</strong> ({esc(mnd)}-kolonnene i
   PPT-rapporten) krever varelinjedata og kan ikke beregnes for {esc(mnd)} {ry}
   fra API-et. Salgsheadere har ingen kostpris.</div>

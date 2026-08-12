@@ -36,7 +36,11 @@ SELECT = ["SALESLINEID", "SALEID", "STOREID_FK", "STOCKID_FK", "SaleDate",
           "Brand", "Group", "Name", "SizeLabel", "Employee", "Season",
           "Gender", "Store", "Stock"]
 
-#: Stock -> deck store name, incl. the deck's Shopify/Treasure merges.
+#: Stock -> deck store name. Taxonomy (user-confirmed): Online Frontend (183)
+#: is the CHAIN webstore ('Hoyer Webshop'); the Shopify stocks are separate
+#: webstores OWNED BY the physical store of the same name and are merged into
+#: it, as the chain's own report does. Strommen Treasure is a Strommen unit,
+#: not a webstore.
 STOCK_STORE = {
     146: "Høyer Arendal", 444: "Høyer Bodø", 157: "Høyer Byporten",
     145: "Høyer Grimstad", 2175: "Høyer Gulskogen",
