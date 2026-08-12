@@ -101,7 +101,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-heigh
 @media (max-width:640px){.wrap{padding:26px 14px 60px;gap:32px;}}
 .suite{display:flex;flex-wrap:wrap;gap:2px 18px;font-size:11px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--stone);border-bottom:1px solid var(--hair);
-  padding-bottom:12px;}
+  padding:10px 0 12px;position:sticky;top:0;z-index:40;background:var(--paper);}
 .suite a{color:var(--stone);text-decoration:none;}
 .suite a:hover,.suite a:focus-visible{color:var(--ox);outline:none;}
 .suite .cur{color:var(--ink);font-weight:600;border-bottom:2px solid var(--ox);
