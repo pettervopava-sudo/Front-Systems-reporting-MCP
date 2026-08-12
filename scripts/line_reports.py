@@ -279,7 +279,7 @@ def store_table(rows, maxrev, cols=("rev", "bf", "bfp", "trans", "snitt", "ppk")
     return body
 
 
-def build_all(lines, window_note, outdir):
+def build_all(lines, window_note, outdir, only=None):
     chain = agg(lines, lambda l: "kjede")["kjede"]
     per_store = sorted(agg(lines, lambda l: l.store).items(),
                        key=lambda kv: -kv[1]["rev"])
@@ -598,6 +598,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
         "07_Diverse.html", "07", "Diverse", window_note, body)
 
     for fname, content in files.items():
+        if only and fname[:2] not in only:
+            continue
         if not content.isascii():
             bad = next(ch for ch in content if ord(ch) > 127)
             raise SystemExit(f"{fname}: non-ASCII char {bad!r} — would mojibake")
@@ -610,6 +612,8 @@ def main():
     ap.add_argument("--from", dest="dfrom", required=True)
     ap.add_argument("--to", dest="dto", required=True, help="exclusive")
     ap.add_argument("--outdir", default=str(ROOT / "reports"))
+    ap.add_argument("--only", default=None,
+                    help="comma-separated report numbers, e.g. 03,04,05,06")
     args = ap.parse_args()
     d0, d1 = dt.date.fromisoformat(args.dfrom), dt.date.fromisoformat(args.dto)
     outdir = pathlib.Path(args.outdir); outdir.mkdir(parents=True, exist_ok=True)
@@ -621,7 +625,15 @@ def main():
         finally:
             await c.aclose()
 
-    raw = asyncio.run(fetch())
+    cache = ROOT / "reports" / "cache" / f"saleslines_{d0}_{d1}.json"
+    if cache.exists():
+        raw = json.load(open(cache))
+        print(f"  loaded {len(raw)} lines from {cache.name}", file=sys.stderr)
+    else:
+        raw = asyncio.run(fetch())
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        json.dump(raw, open(cache, "w"), ensure_ascii=False)
+        print(f"  fetched {len(raw)} lines -> saved {cache.name}", file=sys.stderr)
     lines = [L(r) for r in raw if r["STOCKID_FK"] not in EXCLUDED_STOCKS]
     kept = [l for l in lines if l.store]
     dropped = sum(1 for l in lines if not l.store)
@@ -632,7 +644,8 @@ def main():
     window_note = (f"Linjedata {first_day} &ndash; {last_day} &mdash; f&oslash;rste "
                    f"periode med varelinjer i API-et. {len(kept):,} linjer."
                    ).replace(",", " ")
-    build_all(kept, window_note, outdir)
+    only = set(args.only.split(",")) if args.only else None
+    build_all(kept, window_note, outdir, only=only)
     ch = agg(kept, lambda l: "x")["x"]
     print(f"  chain: {ch['rev']:,.2f} rev, BF {ch['bf']:,.2f} "
           f"({bfp(ch):.1f}%), {len(ch['sales'])} trans", file=sys.stderr)
