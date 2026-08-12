@@ -106,24 +106,34 @@ def main() -> None:
              *middle,
              reports / "07_Diverse.html"]
 
-    def combine_html(contents, out_html):
+    def combine_html(contents, out_html, anchors):
         """One self-contained page from the parts, same order as the PDF.
 
         Each part carries an identical <style> and its own <script> with the
         same const names; keep one stylesheet, scope every script in a bare
         block so const declarations cannot collide, and keep one #tip div.
+        The suite nav is KEPT and its file links become in-page anchors, so
+        the menu works on hosts that only serve this single file.
         """
         pieces = []
-        for i, c in enumerate(contents):
+        for i, (c, aid) in enumerate(zip(contents, anchors)):
             if i > 0:
                 c = re.sub(r"<title>.*?</title>", "", c, count=1, flags=re.S)
                 c = re.sub(r"<style>.*?</style>", "", c, count=1, flags=re.S)
             c = c.replace('<div id="tip" role="status" aria-live="polite"></div>', "")
             c = c.replace("<script>", "<script>{").replace("</script>", "}</script>")
-            pieces.append(c)
+            pieces.append(f'<div id="{aid}"></div>' + c)
         page = ("\n".join(pieces)
-                + '<div id="tip" role="status" aria-live="polite"></div>'
-                + "<style>.suite{display:none}</style>")
+                + '<div id="tip" role="status" aria-live="polite"></div>')
+        # nav file links -> anchors (every suite filename, wherever it appears)
+        seen = {a for a in anchors}
+        for fname, _title in LR.SUITE:
+            aid = f"del-{fname[:2]}"
+            target = aid if aid in seen else "del-0306"
+            page = page.replace(f'href="{fname}"', f'href="#{target}"')
+        page += ("<style>html{scroll-behavior:smooth}"
+                 "@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}"
+                 "</style>")
         if not page.isascii():
             raise SystemExit("combined HTML not pure ASCII")
         out_html.write_text(page, encoding="ascii")
@@ -164,7 +174,9 @@ def main() -> None:
         with open(out, "wb") as fh:
             writer.write(fh)
     if args.html:
-        combine_html(contents, out.with_suffix(".html"))
+        anchors = [(f"del-{p.name[:2]}" if p is not None else "del-0306")
+                   for p in parts]
+        combine_html(contents, out.with_suffix(".html"), anchors)
     from pypdf import PdfReader
     pages = len(PdfReader(str(out)).pages)
     print(f"  merged: {out} ({pages} pages, {out.stat().st_size:,} bytes)",
