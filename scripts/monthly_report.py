@@ -321,11 +321,49 @@ def render(**k):
             f"<td class='num r'>{pct_metric(label, ytd, ytd_prev)}</td>"
             f"<td class='num r'>{f(r12)}</td><td class='num r'>{f(r24)}</td>"
             f"<td class='num r'>{pct_metric(label, r12, r24)}</td></tr>")
-    for label in ("BF i kroner", "BF %", "Rabatt i kroner"):
-        kpi_rows += (f"<tr class='na'><td>{esc(label)}</td>"
-                     + "<td class='r' colspan='9'>ikke tilgjengelig &mdash; API-et har "
-                       "ingen varelinjedata for perioden</td></tr>"
-                     ).encode("ascii", "xmlcharrefreplace").decode()
+    bf_block = ""
+    if (ry, rm) == (2026, 7):
+        # BF and rabatt need line data the API lacks for this period. The
+        # figures below are transcribed from the chain's own June-2026 PPT
+        # report (slide 3, tall i TNOK) -- the only correct source -- and
+        # keep that report's period frame rather than being mislabelled juli.
+        deck = [
+            ("BF i kroner", "17 581", "18 299", "&minus;4 %",
+             "74 008", "80 601", "&minus;8 %",
+             "188 657", "208 190", "&minus;9 %"),
+            ("BF %", "45 %", "40 %", "+4,9 pstp.",
+             "40 %", "38 %", "+1,8 pstp.",
+             "41 %", "41 %", "0 pstp."),
+            ("Rabatt i kroner", "10 432", "18 578", "&minus;44 %",
+             "76 784", "97 644", "&minus;21 %",
+             "181 574", "195 351", "&minus;7 %"),
+        ]
+        drows = "".join(
+            "<tr><td>" + esc(r[0]) + "</td>"
+            + "".join(f"<td class='num r'>{c}</td>" for c in r[1:]) + "</tr>"
+            for r in deck)
+        bf_block = (
+            "<section><div class='shead'>"
+            "<h2>BF og rabatter &mdash; siste tilgjengelige tall</h2>"
+            "<p>Fra PPT-rapporten for juni 2026 (tall i TNOK). Juli-tall for "
+            "disse krever varelinjedata, som ikke finnes i API-et for perioden."
+            "</p></div>"
+            "<div class='tw'><table><thead>"
+            "<tr><th></th>"
+            "<th class='grp r' colspan='3'>Juni</th>"
+            "<th class='grp r' colspan='3'>Hittil t.o.m. juni</th>"
+            "<th class='grp r' colspan='3'>Rullerende (t.o.m. juni)</th></tr>"
+            "<tr><th>N&oslash;kkeltall (TNOK)</th>"
+            "<th class='r'>2026</th><th class='r'>2025</th><th class='r'>Endring</th>"
+            "<th class='r'>2026</th><th class='r'>2025</th><th class='r'>Endring</th>"
+            "<th class='r'>Siste 12 mnd</th><th class='r'>Siste 24&ndash;12</th>"
+            "<th class='r'>Endring</th></tr>"
+            "</thead><tbody>" + drows + "</tbody></table></div></section>")
+    else:
+        for label in ("BF i kroner", "BF %", "Rabatt i kroner"):
+            kpi_rows += (f"<tr class='na'><td>{esc(label)}</td>"
+                         + "<td class='r' colspan='9'>ikke tilgjengelig &mdash; "
+                           "API-et har ingen varelinjedata for perioden</td></tr>")
 
     max_rev = max(r[3][1] for r in k["store_rows"]) or 1
     store_rows = ""
@@ -398,6 +436,7 @@ def render(**k):
             .replace("__PREVAAR__", str(ry - 1))
             .replace("__PREV2AAR__", str(ry - 2))
             .replace("__KPI_ROWS__", kpi_rows)
+            .replace("__BF_BLOCK__", bf_block)
             .replace("__STORE_ROWS__", store_rows)
             .replace("__MATRIX_ROWS__", mrows)
             .replace("__CHART__", chart)
