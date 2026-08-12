@@ -185,9 +185,14 @@ function bind(node,text){
 """
 
 
+NAV_SUBSET = None  # set by build_all(only=...) so subset builds self-link only
+
+
 def suite_nav(current: str) -> str:
     parts = []
-    for fname, title in SUITE:
+    entries = ([(f, t) for f, t in SUITE if f[:2] in NAV_SUBSET]
+               if NAV_SUBSET else SUITE)
+    for fname, title in entries:
         if fname == current:
             parts.append(f'<span class="cur">{title}</span>')
         else:
@@ -280,6 +285,8 @@ def store_table(rows, maxrev, cols=("rev", "bf", "bfp", "trans", "snitt", "ppk")
 
 
 def build_all(lines, window_note, outdir, only=None):
+    global NAV_SUBSET
+    NAV_SUBSET = only
     chain = agg(lines, lambda l: "kjede")["kjede"]
     per_store = sorted(agg(lines, lambda l: l.store).items(),
                        key=lambda kv: -kv[1]["rev"])
