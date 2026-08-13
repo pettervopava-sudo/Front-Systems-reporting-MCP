@@ -73,6 +73,12 @@ class FrontSystemsClient:
             start, end = window
             params["from"] = f"'{start}'"
             params["to"] = f"'{end - dt.timedelta(days=1)}'"
+        return await self._get_retrying(entity, params)
+
+    async def _get_retrying(self, entity: str, params: dict[str, str]) -> list[dict]:
+        """GET with the standard retry policy: timeouts, transport errors,
+        429 (honouring Retry-After) and 5xx are retried with backoff; auth
+        failures and other statuses raise immediately."""
         url = f"{self._config.base_url}/odata/{entity}"
         last: Exception | None = None
 
@@ -117,15 +123,9 @@ class FrontSystemsClient:
         """Escape hatch for endpoints whose parameters are not OData filters.
 
         Stockstatus takes snapshotDateTime as an ordinary query parameter, so it
-        cannot go through build_params.
+        cannot go through build_params. Same retry policy as fetch().
         """
-        url = f"{self._config.base_url}/odata/{entity}"
-        response = await self._http.get(url, params=params)
-        if response.status_code in (401, 403):
-            raise AuthError(f"{entity}: authentication rejected.")
-        if response.status_code != 200:
-            raise ApiError(f"{entity}: HTTP {response.status_code}.")
-        return self._parse(entity, response)
+        return await self._get_retrying(entity, params)
 
     @staticmethod
     def _parse(entity: str, response: httpx.Response) -> list[dict]:

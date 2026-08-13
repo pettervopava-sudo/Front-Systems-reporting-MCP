@@ -188,7 +188,7 @@ async def ensure_linjeagg(months):
     if not missing:
         return
     client = FrontSystemsClient(load_config())
-    sem = asyncio.Semaphore(6)
+    sem = asyncio.Semaphore(3)
 
     async def one(y, m):
         d0 = dt.date(y, m, 1)
