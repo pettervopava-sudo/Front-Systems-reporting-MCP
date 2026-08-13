@@ -22,3 +22,5 @@ out/
 
 # Generated reports and monthly cache
 reports/
+# Synced copy of the suite served on port 8811 (scripts/serve_reports.sh)
+webrapport/
