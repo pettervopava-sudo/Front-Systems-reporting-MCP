@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """HØYER report suite — the line-data sections of the monthly report deck.
 
-Generates reports 02–07 of the suite (Omsetning og BF, Sesonger, Rabatter,
+Generates reports 03–08 of the suite (Omsetning og BF, Sesonger, Rabatter,
 Merker, Selgere, Diverse) from Saleslines, fetched via the endpoint's
-own from/to window parameters (full history back to 2022).
+own from/to window parameters (full history back to 2017).
 Report 01 (månedsrapporten) comes from monthly_report.py.
 
 All revenue is SUM(Qty * Price); Price is a unit price and returns carry
-Qty = -1. BF = SUM(Qty * (Price - Cost)). Rabatt = SUM(Qty * Discount).
+Qty = -1. BF er nettobasert: SUM(Qty * Price)/1.25 - SUM(Qty * Cost).
+Rabatt = SUM(Qty * Discount).
 Customer fields are never fetched. Output is pure ASCII.
 
 Usage:
@@ -60,12 +61,13 @@ SELLER_MIN_TRANS = 40  # default for short windows; use --seller-min 100 for ful
 
 SUITE = [
     ("01_Manedsrapport_juli_2026.html", "M&aring;nedsrapport juli"),
-    ("02_Omsetning_og_BF.html", "Omsetning og BF"),
-    ("03_Sesonger.html", "Sesonger"),
-    ("04_Rabatter.html", "Rabatter"),
-    ("05_Merker.html", "Merker"),
-    ("06_Selgere.html", "Selgere"),
-    ("07_Diverse.html", "Diverse"),
+    ("02_Oppsummering.html", "Oppsummering"),
+    ("03_Omsetning_og_BF.html", "Omsetning og BF"),
+    ("04_Sesonger.html", "Sesonger"),
+    ("05_Rabatter.html", "Rabatter"),
+    ("06_Merker.html", "Merker"),
+    ("07_Selgere.html", "Selgere"),
+    ("08_Diverse.html", "Diverse"),
 ]
 
 
@@ -251,7 +253,7 @@ def page(current, no, title, window_note, body, foot_extra="") -> str:
 {body}
 <footer>
   <div>Omsetning er <code>SUM(Qty &times; Price)</code> (inkl. mva); BF er
-    <code>SUM(Qty &times; (Price &minus; Cost))</code>; returer (Qty = &minus;1)
+    nettobasert: <code>SUM(Qty &times; Price)/1,25 &minus; SUM(Qty &times; Cost)</code>; returer (Qty = &minus;1)
     trekkes fra. BMB er utelatt, som i m&aring;nedsrapporten. Kundedata hentes ikke.</div>
   {foot_extra}
   <div>Rapportserie H&Oslash;YER-kjeden &middot; <code>scripts/line_reports.py</code></div>
@@ -388,8 +390,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
   svg.appendChild(ax);
 }})();
 </script>"""
-    files["02_Omsetning_og_BF.html"] = page(
-        "02_Omsetning_og_BF.html", "02", "Omsetning og bruttofortjeneste",
+    files["03_Omsetning_og_BF.html"] = page(
+        "03_Omsetning_og_BF.html", "03", "Omsetning og bruttofortjeneste",
         window_note, body)
 
     # ---- 03 Sesonger -------------------------------------------------------
@@ -415,8 +417,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
     <th class="r">Omsetning</th><th class="r">BF kr</th><th class="r">BF %</th>
     <th class="r">Plagg</th><th class="r">Andel oms.</th></tr></thead>
   <tbody>{rows}</tbody></table></div></section>"""
-    files["03_Sesonger.html"] = page(
-        "03_Sesonger.html", "03", "Sesonger", window_note, body)
+    files["04_Sesonger.html"] = page(
+        "04_Sesonger.html", "04", "Sesonger", window_note, body)
 
     # ---- 04 Rabatter -------------------------------------------------------
     disc_lines = [l for l in lines if l.rab > 0]
@@ -471,8 +473,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
 <div class="note"><strong>Historikk.</strong> Rabatt gitt i % siste 3 &aring;r
   (som i m&aring;nedsrapporten) kan f&oslash;rst lages n&aring;r linjedata har
   bygget seg opp &mdash; API-et inneholder linjer fra 01.08.2026.</div>"""
-    files["04_Rabatter.html"] = page(
-        "04_Rabatter.html", "04", "Rabatter", window_note, body)
+    files["05_Rabatter.html"] = page(
+        "05_Rabatter.html", "05", "Rabatter", window_note, body)
 
     # ---- 05 Merker ---------------------------------------------------------
     per_brand = sorted(agg(lines, lambda l: l.brand).items(),
@@ -521,8 +523,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
     <th class="r">Plagg</th><th class="r">Rabatt %</th></tr></thead>
   <tbody>{rows}</tbody></table></div></section>
 {spec}"""
-    files["05_Merker.html"] = page(
-        "05_Merker.html", "05", "Merker", window_note, body)
+    files["06_Merker.html"] = page(
+        "06_Merker.html", "06", "Merker", window_note, body)
 
     # ---- 06 Selgere --------------------------------------------------------
     ppk_rows = store_table(per_store, maxrev)
@@ -604,8 +606,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
   100 transaksjoner pr m&aring;ned; for dette 11-dagers vinduet er terskelen
   skalert til {SELLER_MIN_TRANS}. Systembrukere (Webshop, Shopify-integrasjon)
   er holdt utenfor.</div>"""
-    files["06_Selgere.html"] = page(
-        "06_Selgere.html", "06", "Selgere &mdash; PPK og KPK", window_note, body)
+    files["07_Selgere.html"] = page(
+        "07_Selgere.html", "07", "Selgere &mdash; PPK og KPK", window_note, body)
 
     # ---- 07 Diverse --------------------------------------------------------
     per_sale = collections.defaultdict(lambda: {"rev": 0.0, "store": None, "date": ""})
@@ -639,8 +641,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
 <div class="note"><strong>St&oslash;rste kunder</strong> er bevisst utelatt:
   det krever kundeidentifikatorer, og denne rapportserien henter ikke kundedata
   fra API-et. Ta det som en egen beslutning hvis behovet finnes.</div>"""
-    files["07_Diverse.html"] = page(
-        "07_Diverse.html", "07", "Diverse", window_note, body)
+    files["08_Diverse.html"] = page(
+        "08_Diverse.html", "08", "Diverse", window_note, body)
 
     for fname, content in files.items():
         if only and fname[:2] not in only:
@@ -660,7 +662,7 @@ def main():
     ap.add_argument("--seller-min", type=int, default=None,
                     help="min transaksjoner for beste selger (100 = deckets terskel)")
     ap.add_argument("--only", default=None,
-                    help="comma-separated report numbers, e.g. 03,04,05,06")
+                    help="comma-separated report numbers, e.g. 04,05,06,07")
     args = ap.parse_args()
     d0, d1 = dt.date.fromisoformat(args.dfrom), dt.date.fromisoformat(args.dto)
     outdir = pathlib.Path(args.outdir); outdir.mkdir(parents=True, exist_ok=True)

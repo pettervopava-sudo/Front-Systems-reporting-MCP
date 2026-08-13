@@ -4,7 +4,7 @@
 Wraps each report file in a print shell (forced light theme, A4 landscape,
 suite nav hidden), prints each to PDF with Chrome so the SVG charts render,
 and merges the parts with pypdf. For the July 2026 edition the line-data
-sections (03–06) are represented by a single explanatory page, since their
+sections (04–07) are represented by a single explanatory page, since their
 on-disk versions cover a later window and may not appear in a July document.
 
 Usage:
@@ -42,6 +42,9 @@ section,.note,.kpis{break-inside:avoid-page;}
 .mast h1{font-size:30px;}
 .brand{width:96px;}
 .plot{break-inside:avoid;}
+/* the 02 chart pair is taller than a landscape page together with its mast;
+   cap its height so masthead + chart share the first page of the part */
+svg#sum{max-height:420px;margin:0 auto;}
 /* the 14-column month matrix is wider than landscape A4 even zoomed; shrink
    just that section's table so okt-des are not clipped off the page edge */
 section:has(svg#monthly) table{font-size:9px;}
@@ -68,7 +71,7 @@ def to_pdf(html_path: pathlib.Path, pdf_path: pathlib.Path) -> None:
 def unavailable_page(mnd: str, ry: int) -> str:
     body = f"""{LR.suite_nav("none")}
 <header class="mast">
-  <div class="no">3&ndash;6</div>
+  <div class="no">4&ndash;7</div>
   <div>
     <div class="kicker">H&Oslash;YER-kjeden &middot; m&aring;nedsrapport</div>
     <h1>Sesonger &middot; Rabatter &middot; Merker &middot; Selgere</h1>
@@ -101,12 +104,13 @@ def main() -> None:
     out = pathlib.Path(args.out or reports / f"Manedsrapport_{mnd}_{ry}.pdf")
 
     line_parts = [reports / f"{nn}.html" for nn in
-                  ("03_Sesonger", "04_Rabatter", "05_Merker", "06_Selgere")]
+                  ("04_Sesonger", "05_Rabatter", "06_Merker", "07_Selgere")]
     middle = line_parts if all(f.exists() for f in line_parts) else [None]
     parts = [reports / f"01_Manedsrapport_{mnd}_{ry}.html",
-             reports / "02_Omsetning_og_BF.html",
+             reports / "02_Oppsummering.html",
+             reports / "03_Omsetning_og_BF.html",
              *middle,
-             reports / "07_Diverse.html"]
+             reports / "08_Diverse.html"]
 
     def combine_html(contents, out_html, anchors):
         """One self-contained page from the parts, same order as the PDF.
@@ -131,7 +135,7 @@ def main() -> None:
         seen = {a for a in anchors}
         for fname, _title in LR.SUITE:
             aid = f"del-{fname[:2]}"
-            target = aid if aid in seen else "del-0306"
+            target = aid if aid in seen else "del-0407"
             page = page.replace(f'href="{fname}"', f'href="#{target}"')
         # Paged mode: one part visible at a time, the sticky menu switches
         # pages via location.hash. Progressive enhancement -- without JS the
@@ -193,7 +197,7 @@ def main() -> None:
         with open(out, "wb") as fh:
             writer.write(fh)
     if args.html:
-        anchors = [(f"del-{p.name[:2]}" if p is not None else "del-0306")
+        anchors = [(f"del-{p.name[:2]}" if p is not None else "del-0407")
                    for p in parts]
         combine_html(contents, out.with_suffix(".html"), anchors)
     from pypdf import PdfReader

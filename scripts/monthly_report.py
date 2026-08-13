@@ -6,11 +6,9 @@ Reproduces the header-derived sections of the chain's monthly report
 nøkkeltall, omsetning pr butikk, månedsvis matrix, høyeste salgsdager and
 høyeste enkeltsalg — for the month, YTD, and the two trailing-twelve windows.
 
-What it deliberately does NOT contain, and why: bruttofortjeneste (BF),
-rabatter, sesonger, merker, plagg pr kunde and beste selger all require
-line-level data (Saleslines), which this API only holds from 2026-08-01.
-For months before that, those sections cannot be computed from the API and
-are listed as unavailable in the report rather than silently omitted.
+BF and rabatt rows come from the linjeagg caches (Saleslines, full history
+via the from/to window parameters); the detailed line sections (sesonger,
+rabatter, merker, selgere) live in reports 04-07 of the suite.
 
 Conventions -- validated to the krone against the June 2026 deck:
   * "Brutto omsetning" == SUM(Sales.Total) over non-voided sales (VAT incl).
@@ -56,11 +54,11 @@ CACHE = ROOT / "reports" / "cache"
 CACHE_VERSION = 2  # v2: per_day split by register, so exclusions apply to day tables
 SELECT = ["SALEID", "STOREID_FK", "SaleDate", "Total", "IsVoided"]
 HISTORY_START = (2024, 1)
-LINES_START = dt.date(2026, 8, 1)
 VAT = 1.25
 
 #: Deck store composition. Stocks come from the live harvest; the register
-#: extras are stores absent from Saleslines (Bergen has no line data at all).
+#: extras are stores absent from the harvest window (Bergen's line data lives
+#: under stock 279 and ends with juli 2026).
 #: Validated against the June 2026 deck per-store table.
 STORE_STOCKS = {
     "Høyer Arendal": [146], "Høyer Bodø": [444],
@@ -75,8 +73,7 @@ STORE_STOCKS = {
 }
 STORE_REG_EXTRAS = {"Høyer Bergen": [324, 340, 370, 373]}
 #: Stores with a known closure date: included in months they traded, excluded
-#: from later months, and footnoted. Bergen closed 2026-08-01 (user-confirmed),
-#: which is also why it has no Saleslines presence at all.
+#: from later months, and footnoted. Bergen closed 2026-08-01 (user-confirmed).
 STORE_CLOSED = {"Høyer Bergen": "2026-08-01"}
 EXCLUDED_STOCKS = {1333, 1901}          # BMB / BMB Shopify
 EXCLUDED_REGS = {3207}                  # Outlet Nydalen (antatt)
@@ -174,6 +171,50 @@ def linjeagg(month_list):
     return tot
 
 
+LINJEAGG_SELECT = ["STOCKID_FK", "Qty", "Price", "Cost", "Discount", "FullPrice"]
+
+
+async def ensure_linjeagg(months):
+    """Fetch and cache line aggregates for months missing from the cache.
+
+    Deck composition applied at line level: only stocks in the suite's
+    stock->store map count (line_reports.STOCK_STORE), which excludes BMB,
+    Outlet Nydalen, Teststore and nedlagte butikker for every year. The
+    builder reproduces the existing linjeagg_2026-07 cache to the oere.
+    """
+    import line_reports as LR
+    missing = [(y, m) for y, m in months
+               if not (CACHE / f"linjeagg_{y:04d}-{m:02d}.json").exists()]
+    if not missing:
+        return
+    client = FrontSystemsClient(load_config())
+    try:
+        for y, m in missing:
+            d0 = dt.date(y, m, 1)
+            nxt = dt.date(y + 1, 1, 1) if m == 12 else dt.date(y, m + 1, 1)
+            rows = await client.fetch_raw("Saleslines", {
+                "from": f"'{d0}'", "to": f"'{nxt - dt.timedelta(days=1)}'",
+                "$select": ",".join(LINJEAGG_SELECT), "$top": "2000000"})
+            tot = {"rev": 0.0, "cost": 0.0, "rab": 0.0, "full": 0.0}
+            kept = 0
+            for r in rows:
+                if r["STOCKID_FK"] not in LR.STOCK_STORE:
+                    continue
+                kept += 1
+                q = float(r["Qty"] or 0)
+                tot["rev"] += round(q * float(r["Price"] or 0), 2)
+                tot["cost"] += round(q * float(r["Cost"] or 0), 2)
+                tot["rab"] += round(q * float(r["Discount"] or 0), 2)
+                tot["full"] += round(q * float(r["FullPrice"] or 0), 2)
+            json.dump({"month": f"{y:04d}-{m:02d}", "lines": kept,
+                       **{k: round(v, 2) for k, v in tot.items()}},
+                      open(CACHE / f"linjeagg_{y:04d}-{m:02d}.json", "w"))
+            print(f"  linjeagg {y:04d}-{m:02d}: {kept:,} lines, "
+                  f"rev {tot['rev']:,.0f}", file=sys.stderr)
+    finally:
+        await client.aclose()
+
+
 class Agg:
     """Per-store [trans, revenue] over a set of months, deck conventions applied."""
 
@@ -222,7 +263,7 @@ def main():
     args = ap.parse_args()
     ry, rm = int(args.month[:4]), int(args.month[5:7])
     out = pathlib.Path(args.out or ROOT / "reports" /
-                       f"Manedsrapport_{MND[rm-1]}_{ry}.html")
+                       f"01_Manedsrapport_{MND[rm-1]}_{ry}.html")
 
     nxt = (ry + 1, 1) if rm == 12 else (ry, rm + 1)
     entries = asyncio.run(ensure_cache(nxt))

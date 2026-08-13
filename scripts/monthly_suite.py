@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Reports 02–07 of the månedsrapport suite, strictly month-and-earlier data.
+"""Reports 02, 03 and 08 of the månedsrapport suite.
+
+02 Oppsummering: the deck's chain-level chart pair — brutto omsetning and
+BF % for the report month, year for year back to 2017, from the linjeagg
+caches (built on demand via the Saleslines from/to window parameters).
+03 Omsetning pr butikk and 08 Diverse come from the Sales-header caches.
+Reports 04–07 come from line_reports.py, which must run BEFORE this script
+so the suite versions of 03 and 08 win.
 
 The report month's edition may not contain anything newer than the month it
-covers. Sections that need line-level data (BF, sesonger, rabatter, merker,
-selgere) cannot be computed for months before 2026-08-01, when Saleslines
-begins — those pages say so explicitly instead of borrowing later data.
-
-What IS computable from Sales headers for any month back to 2024:
-per-store revenue/transactions/snittkjøp (02), and høyeste enkeltsalg and
-salgsdager (07).
+covers (period-purity rule); earlier years are historical comparison and
+always allowed.
 
 The register→store mapping is dimensional metadata (validated to the krone
 against the June 2026 deck); no post-month figures are used anywhere.
@@ -49,6 +51,111 @@ def month_days(y, upto, reg_to_store, excluded):
     return days
 
 
+def _panel(vals, labels, top, bot, W, gl, gstep, unit, aria):
+    """One line-chart panel: grid, ox line with labelled points, dashed trend."""
+    L, R = 64, 28
+    lo = (min(vals) // gstep - (1 if min(vals) % gstep < gstep * .15 else 0)) * gstep
+    hi = (max(vals) // gstep + 1) * gstep
+    if (max(vals) - lo) / (hi - lo) > .92:
+        hi += gstep
+    n = len(vals)
+    xs = [L + (W - L - R) * (i + .5) / n for i in range(n)]
+    y = lambda v: bot - (v - lo) / (hi - lo) * (bot - top)
+    s = f'<g class="grid">'
+    g = lo
+    while g <= hi:
+        s += f'<line x1="{L}" x2="{W - R}" y1="{y(g):.1f}" y2="{y(g):.1f}"/>'
+        g += gstep
+    s += '</g><g class="axis">'
+    g = lo
+    while g <= hi:
+        s += (f'<text x="{L - 8}" y="{y(g) + 3.5:.1f}" text-anchor="end">'
+              f'{gl(g)}</text>')
+        g += gstep
+    for x, lab in zip(xs, labels):
+        s += f'<text x="{x:.1f}" y="{bot + 18}" text-anchor="middle">{lab}</text>'
+    s += '</g>'
+    # least-squares trend over the series, dashed, understated
+    mx, my = (n - 1) / 2, sum(vals) / n
+    beta = (sum((i - mx) * (v - my) for i, v in enumerate(vals))
+            / (sum((i - mx) ** 2 for i in range(n)) or 1))
+    s += (f'<line x1="{xs[0]:.1f}" y1="{y(my + beta * (0 - mx)):.1f}" '
+          f'x2="{xs[-1]:.1f}" y2="{y(my + beta * ((n - 1) - mx)):.1f}" '
+          f'stroke="var(--stone)" stroke-width="1.5" stroke-dasharray="7 6"/>')
+    pts = " ".join(f"{x:.1f},{y(v):.1f}" for x, v in zip(xs, vals))
+    s += (f'<polyline points="{pts}" fill="none" stroke="var(--ox)" '
+          f'stroke-width="2"/>')
+    for i, (x, v) in enumerate(zip(xs, vals)):
+        below = (0 < i < n - 1 and vals[i - 1] > v and vals[i + 1] > v)
+        ly = y(v) + 22 if below else y(v) - 11
+        s += (f'<g class="pt" tabindex="0" role="img" aria-label="{aria(i)}">'
+              f'<circle cx="{x:.1f}" cy="{y(v):.1f}" r="3.5" fill="var(--ox)"/>'
+              f'<text class="vlab" x="{x:.1f}" y="{ly:.1f}" '
+              f'text-anchor="middle">{unit(v)}</text></g>')
+    return s
+
+
+def summary_page(series, mnd, ry, window):
+    """Report 02: the deck's 'Oppsummering -- omsetning og BF %' chart pair."""
+    years = [y for y, _ in series]
+    rev = [d["rev"] for _, d in series]
+    bfp = [d["bf"] / d["netto"] * 100 for _, d in series]
+    W = 1080
+    m_lab = lambda v: (f"{v / 1e6:.1f}".replace(".", ",") + "M")
+    p_lab = lambda v: (f"{v:.1f}".replace(".", ",") + "%")
+    aria_r = lambda i: (f"{esc(mnd)} {years[i]}: brutto {nf(rev[i])} kr")
+    aria_b = lambda i: (f"{esc(mnd)} {years[i]}: BF {p_lab(bfp[i])}")
+    svg = (f'<svg id="sum" viewBox="0 0 {W} 660" role="img" '
+           f'aria-label="Brutto omsetning og BF-prosent, {esc(mnd)} '
+           f'{years[0]}&ndash;{years[-1]}">'
+           f'<text class="ptitle" x="64" y="18">BRUTTO OMSETNING</text>'
+           + _panel(rev, years, 40, 280, W, lambda g: f"{g / 1e6:.0f}M",
+                    10e6, m_lab, aria_r)
+           + f'<text class="ptitle" x="64" y="388">BF %</text>'
+           + _panel(bfp, years, 410, 620, W, lambda g: f"{g:.0f}%",
+                    5, p_lab, aria_b)
+           + "</svg>")
+    rows = ""
+    prev = None
+    for (y, d) in series:
+        chg = MR.pct(d["rev"], prev["rev"]) if prev else "&ndash;"
+        rows += (f"<tr><td class='num'>{y}</td>"
+                 f"<td class='num r'>{nf(d['rev'])}</td>"
+                 f"<td class='num r'>{chg}</td>"
+                 f"<td class='num r'>{nf(d['bf'])}</td>"
+                 f"<td class='num r'>{p1(d['bf'] / d['netto'] * 100)}</td>"
+                 f"<td class='num r'>{nf(d['rab'])}</td></tr>")
+        prev = d
+    body = f"""<section><div class="shead"><h2>Omsetning og BF % &mdash; {esc(mnd)}, kjeden</h2>
+  <p>Bruttoomsetning og bruttofortjeneste i prosent av netto for {esc(mnd)}
+     m&aring;ned, &aring;r for &aring;r. Stiplet linje er line&aelig;r trend.</p></div>
+<div class="legend"><span><i class="sw" style="background:var(--ox)"></i>{esc(mnd)} pr &aring;r</span>
+  <span><i class="sw" style="background:var(--stone)"></i>Trend</span></div>
+<div class="plot">{svg}</div></section>
+<section><div class="shead"><h2>Tallene bak grafen</h2></div>
+<div class="tw"><table>
+  <thead><tr><th>&Aring;r</th><th class="r">Brutto omsetning</th>
+    <th class="r">Endring</th><th class="r">BF i kroner</th>
+    <th class="r">BF %</th><th class="r">Rabatt</th></tr></thead>
+  <tbody>{rows}</tbody></table></div></section>
+<div class="note"><strong>Sammensetning.</strong> Alle &aring;r er beregnet fra
+  varelinjene med m&aring;nedsrapportens utelatelser (BMB, Outlet Nydalen,
+  Teststore og nedlagte butikker) &mdash; ogs&aring; historisk. PPT-utgavens
+  graf inkluderer enkelte den gang &aring;pne, senere nedlagte butikker
+  (bl.a. Eger, Stavanger og Troms&oslash;) i &aring;rene f&oslash;r 2022, og
+  viser derfor h&oslash;yere bruttotall der; fra 2022 og utover er tallene
+  sammenlignbare. BF = netto omsetning (eks. mva) minus varekost.</div>
+<script>
+{LR.TIP_JS}
+document.querySelectorAll("#sum g.pt").forEach(g=>bind(g,g.getAttribute("aria-label")));
+</script>
+<style>#sum .ptitle{{font-size:11px;letter-spacing:.12em;fill:var(--stone);
+  font-weight:600;font-family:var(--sans);}}
+#sum .vlab{{font-family:var(--mono);font-size:11px;fill:var(--ink);}}
+#sum g.pt:focus-visible circle{{stroke:var(--ink);stroke-width:2;outline:none;}}</style>"""
+    return page("02_Oppsummering.html", "02", "Omsetning og BF %", window, body)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--month", required=True, help="YYYY-MM")
@@ -77,11 +184,17 @@ def main():
         closed_note += (f" {esc(store)} er avviklet og inng&aring;r i alle "
                         f"perioder butikken var i drift.")
 
-    unavailable = (f"Krever varelinjedata, som ikke finnes i API-et for {mnd} {ry} "
-                   f"eller tidligere perioder. Tallene for denne delen finnes kun i "
-                   f"BI-verkt&oslash;yet bak PPT-rapporten.")
-
     files = {}
+
+    # ---- 02 Oppsummering: omsetning og BF %, rapportmaaneden aar for aar ----
+    sum_years = list(range(2017, ry + 1))
+    asyncio.run(MR.ensure_linjeagg([(y, rm) for y in sum_years]))
+    series = []
+    for y in sum_years:
+        d = MR.linjeagg([(y, rm)])
+        if d and d["rev"] > 0:
+            series.append((y, d))
+    files["02_Oppsummering.html"] = summary_page(series, mnd, ry, window)
 
     # Web units, derived from the live stock map (user-confirmed taxonomy):
     # 183 = the chain webstore; Shopify stocks are store-owned webstores that
@@ -208,36 +321,16 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
   svg.appendChild(ax);
 }})();
 </script>"""
-    files["02_Omsetning_og_BF.html"] = page(
-        "02_Omsetning_og_BF.html", "02", "Omsetning og bruttofortjeneste",
+    files["03_Omsetning_og_BF.html"] = page(
+        "03_Omsetning_og_BF.html", "03", "Omsetning og bruttofortjeneste",
         window, body)
 
-    # ---- 03-06 honest unavailability pages ---------------------------------
-    def stub(fname, no, title, contents):
-        items = "".join(f"<li>{c}</li>" for c in contents)
-        body = f"""<div class="note"><strong>Ikke tilgjengelig for {esc(mnd)} {ry}.</strong>
-  {unavailable}</div>
-<section><div class="shead"><h2>Denne delen inneholder normalt</h2></div>
-<ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;
-  font-size:13.5px;color:var(--ink2);">{items}</ul></section>"""
-        files[fname] = page(fname, no, title, window, body)
+    # Reports 04-07 (sesonger, rabatter, merker, selgere) come from
+    # line_reports.py, run for the report month's window BEFORE this script
+    # so the suite versions of 03 and 08 win. Line history is deep via the
+    # from/to parameters, so those sections exist for any month.
 
-    stub("03_Sesonger.html", "03", "Sesonger",
-         ["Salg og BF fordelt p&aring; sesong &mdash; m&aring;ned og hittil i &aring;r"])
-    stub("04_Rabatter.html", "04", "Rabatter",
-         ["N&oslash;kkeltall rabatter &mdash; m&aring;ned og hittil i &aring;r",
-          "Rabatt gitt i % &mdash; utvikling etter hvert som linjehistorikk bygges opp",
-          "Rabatter p&aring; sesongvarer og basisvarer"])
-    stub("05_Merker.html", "05", "Merker",
-         ["Merker med h&oslash;yest omsetning",
-          "Generelle n&oslash;kkeltall pr merke",
-          "Ralph Lauren, By Malene Birger og NN.07 pr butikk"])
-    stub("06_Selgere.html", "06", "Selgere &mdash; PPK og KPK",
-         ["Plagg pr kunde (PPK) pr butikk",
-          "Beste selger PPK og KPK, med terskler for antall transaksjoner",
-          "Beste selger dame og herre"])
-
-    # ---- 07 Diverse ---------------------------------------------------------
+    # ---- 08 Diverse ---------------------------------------------------------
     md = MR.month_data(ry, rm) or {"top_sales": []}
     singles = [s for s in md["top_sales"]
                if s["reg"] not in excluded and s["reg"] in reg_to_store][:10]
@@ -274,7 +367,7 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
   <tbody>{drows(d_prev)}</tbody></table></div></section>
 <div class="note"><strong>St&oslash;rste kunder</strong> er bevisst utelatt:
   det krever kundeidentifikatorer, og rapportserien henter ikke kundedata.</div>"""
-    files["07_Diverse.html"] = page("07_Diverse.html", "07", "Diverse", window, body)
+    files["08_Diverse.html"] = page("08_Diverse.html", "08", "Diverse", window, body)
 
     for fname, content in files.items():
         if not content.isascii():

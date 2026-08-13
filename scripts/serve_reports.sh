@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WEB="$ROOT/webrapport"
 mkdir -p "$WEB"
-cp "$ROOT"/reports/0[1-7]_*.html "$WEB"/
+cp "$ROOT"/reports/0[1-8]_*.html "$WEB"/
 cp "$ROOT"/reports/Manedsrapport_*.html "$WEB"/ 2>/dev/null || true
 # indeks -> rapport 01, så en lenke uten filnavn også virker
 FIRST=$(ls "$WEB" | grep '^01_' | head -1)
