@@ -138,13 +138,14 @@ def summary_page(series, mnd, ry, window):
     <th class="r">Endring</th><th class="r">BF i kroner</th>
     <th class="r">BF %</th><th class="r">Rabatt</th></tr></thead>
   <tbody>{rows}</tbody></table></div></section>
-<div class="note"><strong>Sammensetning.</strong> Alle &aring;r er beregnet fra
-  varelinjene med m&aring;nedsrapportens utelatelser (BMB, Outlet Nydalen,
-  Teststore og nedlagte butikker) &mdash; ogs&aring; historisk. PPT-utgavens
-  graf inkluderer enkelte den gang &aring;pne, senere nedlagte butikker
-  (bl.a. Eger, Stavanger og Troms&oslash;) i &aring;rene f&oslash;r 2022, og
-  viser derfor h&oslash;yere bruttotall der; fra 2022 og utover er tallene
-  sammenlignbare. BF = netto omsetning (eks. mva) minus varekost.</div>
+<div class="note"><strong>Sammensetning (brukervalg).</strong> Alle &aring;r
+  viser dagens butikksammensetning, konsistent med resten av rapportserien.
+  PPT-utgavens graf teller med noen &mdash; men ikke alle &mdash; senere
+  nedlagte butikker i eldre &aring;r, etter en BI-klassifisering som ikke
+  finnes i kassasystemets API: juli 2021 var hele kjeden (alle butikker i
+  drift da) 82,0M og dagens sammensetning 55,4M, mens PPT-grafen viser 61M.
+  Fra 2025 er definisjonene sammenfallende. BF = netto omsetning (eks. mva)
+  minus varekost.</div>
 <script>
 {LR.TIP_JS}
 document.querySelectorAll("#sum g.pt").forEach(g=>bind(g,g.getAttribute("aria-label")));
