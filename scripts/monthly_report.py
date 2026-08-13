@@ -188,29 +188,34 @@ async def ensure_linjeagg(months):
     if not missing:
         return
     client = FrontSystemsClient(load_config())
-    try:
-        for y, m in missing:
-            d0 = dt.date(y, m, 1)
-            nxt = dt.date(y + 1, 1, 1) if m == 12 else dt.date(y, m + 1, 1)
+    sem = asyncio.Semaphore(6)
+
+    async def one(y, m):
+        d0 = dt.date(y, m, 1)
+        nxt = dt.date(y + 1, 1, 1) if m == 12 else dt.date(y, m + 1, 1)
+        async with sem:
             rows = await client.fetch_raw("Saleslines", {
                 "from": f"'{d0}'", "to": f"'{nxt - dt.timedelta(days=1)}'",
                 "$select": ",".join(LINJEAGG_SELECT), "$top": "2000000"})
-            tot = {"rev": 0.0, "cost": 0.0, "rab": 0.0, "full": 0.0}
-            kept = 0
-            for r in rows:
-                if r["STOCKID_FK"] not in LR.STOCK_STORE:
-                    continue
-                kept += 1
-                q = float(r["Qty"] or 0)
-                tot["rev"] += round(q * float(r["Price"] or 0), 2)
-                tot["cost"] += round(q * float(r["Cost"] or 0), 2)
-                tot["rab"] += round(q * float(r["Discount"] or 0), 2)
-                tot["full"] += round(q * float(r["FullPrice"] or 0), 2)
-            json.dump({"month": f"{y:04d}-{m:02d}", "lines": kept,
-                       **{k: round(v, 2) for k, v in tot.items()}},
-                      open(CACHE / f"linjeagg_{y:04d}-{m:02d}.json", "w"))
-            print(f"  linjeagg {y:04d}-{m:02d}: {kept:,} lines, "
-                  f"rev {tot['rev']:,.0f}", file=sys.stderr)
+        tot = {"rev": 0.0, "cost": 0.0, "rab": 0.0, "full": 0.0}
+        kept = 0
+        for r in rows:
+            if r["STOCKID_FK"] not in LR.STOCK_STORE:
+                continue
+            kept += 1
+            q = float(r["Qty"] or 0)
+            tot["rev"] += round(q * float(r["Price"] or 0), 2)
+            tot["cost"] += round(q * float(r["Cost"] or 0), 2)
+            tot["rab"] += round(q * float(r["Discount"] or 0), 2)
+            tot["full"] += round(q * float(r["FullPrice"] or 0), 2)
+        json.dump({"month": f"{y:04d}-{m:02d}", "lines": kept,
+                   **{k: round(v, 2) for k, v in tot.items()}},
+                  open(CACHE / f"linjeagg_{y:04d}-{m:02d}.json", "w"))
+        print(f"  linjeagg {y:04d}-{m:02d}: {kept:,} lines, "
+              f"rev {tot['rev']:,.0f}", file=sys.stderr)
+
+    try:
+        await asyncio.gather(*(one(y, m) for y, m in missing))
     finally:
         await client.aclose()
 

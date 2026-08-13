@@ -44,7 +44,7 @@ section,.note,.kpis{break-inside:avoid-page;}
 .plot{break-inside:avoid;}
 /* the 02 chart pair is taller than a landscape page together with its mast;
    cap its height so masthead + chart share the first page of the part */
-svg#sum{max-height:420px;margin:0 auto;}
+svg.sumsvg{max-height:420px;margin:0 auto;}
 /* the 14-column month matrix is wider than landscape A4 even zoomed; shrink
    just that section's table so okt-des are not clipped off the page edge */
 section:has(svg#monthly) table{font-size:9px;}

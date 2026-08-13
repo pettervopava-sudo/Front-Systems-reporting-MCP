@@ -95,26 +95,30 @@ def _panel(vals, labels, top, bot, W, gl, gstep, unit, aria):
     return s
 
 
-def summary_page(series, mnd, ry, window):
-    """Report 02: the deck's 'Oppsummering -- omsetning og BF %' chart pair."""
+def _pair_svg(series, label, rev_step):
+    """One 'Omsetning og BF kjeden' chart pair as a standalone SVG."""
     years = [y for y, _ in series]
     rev = [d["rev"] for _, d in series]
     bfp = [d["bf"] / d["netto"] * 100 for _, d in series]
     W = 1080
-    m_lab = lambda v: (f"{v / 1e6:.1f}".replace(".", ",") + "M")
+    m_lab = lambda v: (f"{v / 1e6:.0f}M" if v >= 100e6
+                       else f"{v / 1e6:.1f}".replace(".", ",") + "M")
     p_lab = lambda v: (f"{v:.1f}".replace(".", ",") + "%")
-    aria_r = lambda i: (f"{esc(mnd)} {years[i]}: brutto {nf(rev[i])} kr")
-    aria_b = lambda i: (f"{esc(mnd)} {years[i]}: BF {p_lab(bfp[i])}")
-    svg = (f'<svg id="sum" viewBox="0 0 {W} 660" role="img" '
-           f'aria-label="Brutto omsetning og BF-prosent, {esc(mnd)} '
-           f'{years[0]}&ndash;{years[-1]}">'
-           f'<text class="ptitle" x="64" y="18">BRUTTO OMSETNING</text>'
-           + _panel(rev, years, 40, 280, W, lambda g: f"{g / 1e6:.0f}M",
-                    10e6, m_lab, aria_r)
-           + f'<text class="ptitle" x="64" y="388">BF %</text>'
-           + _panel(bfp, years, 410, 620, W, lambda g: f"{g:.0f}%",
-                    5, p_lab, aria_b)
-           + "</svg>")
+    aria_r = lambda i: (f"{label} {years[i]}: brutto {nf(rev[i])} kr")
+    aria_b = lambda i: (f"{label} {years[i]}: BF {p_lab(bfp[i])}")
+    return (f'<svg class="sumsvg" viewBox="0 0 {W} 660" role="img" '
+            f'aria-label="Brutto omsetning og BF-prosent, {label} '
+            f'{years[0]}&ndash;{years[-1]}">'
+            f'<text class="ptitle" x="64" y="18">BRUTTO OMSETNING</text>'
+            + _panel(rev, years, 40, 280, W, lambda g: f"{g / 1e6:.0f}M",
+                     rev_step, m_lab, aria_r)
+            + f'<text class="ptitle" x="64" y="388">BF %</text>'
+            + _panel(bfp, years, 410, 620, W, lambda g: f"{g:.0f}%",
+                     5, p_lab, aria_b)
+            + "</svg>")
+
+
+def _pair_table(series):
     rows = ""
     prev = None
     for (y, d) in series:
@@ -126,21 +130,39 @@ def summary_page(series, mnd, ry, window):
                  f"<td class='num r'>{p1(d['bf'] / d['netto'] * 100)}</td>"
                  f"<td class='num r'>{nf(d['rab'])}</td></tr>")
         prev = d
-    body = f"""<section><div class="shead"><h2>Omsetning og BF % &mdash; {esc(mnd)}, kjeden</h2>
-  <p>Bruttoomsetning og bruttofortjeneste i prosent av netto for {esc(mnd)}
-     m&aring;ned, &aring;r for &aring;r. Stiplet linje er line&aelig;r trend.</p></div>
-<div class="legend"><span><i class="sw" style="background:var(--ox)"></i>{esc(mnd)} pr &aring;r</span>
-  <span><i class="sw" style="background:var(--stone)"></i>Trend</span></div>
-<div class="plot">{svg}</div></section>
-<section><div class="shead"><h2>Tallene bak grafen</h2></div>
-<div class="tw"><table>
+    return f"""<div class="tw"><table>
   <thead><tr><th>&Aring;r</th><th class="r">Brutto omsetning</th>
     <th class="r">Endring</th><th class="r">BF i kroner</th>
     <th class="r">BF %</th><th class="r">Rabatt</th></tr></thead>
-  <tbody>{rows}</tbody></table></div></section>
+  <tbody>{rows}</tbody></table></div>"""
+
+
+def summary_page(series_m, series_y, mnd, ry, window):
+    """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD."""
+    ytd_label = ("hittil i &aring;r (januar)" if mnd == "januar"
+                 else f"hittil i &aring;r (januar&ndash;{esc(mnd)})")
+    legend = (f'<div class="legend"><span><i class="sw" '
+              f'style="background:var(--ox)"></i>Pr &aring;r</span>'
+              f'<span><i class="sw" style="background:var(--stone)"></i>'
+              f'Trend</span></div>')
+    body = f"""<section><div class="shead"><h2>Omsetning og BF % &mdash; {esc(mnd)}, kjeden</h2>
+  <p>Bruttoomsetning og bruttofortjeneste i prosent av netto for {esc(mnd)}
+     m&aring;ned, &aring;r for &aring;r. Stiplet linje er line&aelig;r trend.</p></div>
+{legend}
+<div class="plot">{_pair_svg(series_m, esc(mnd), 10e6)}</div></section>
+<section><div class="shead"><h2>Tallene bak grafen &mdash; {esc(mnd)}</h2></div>
+{_pair_table(series_m)}</section>
+<section><div class="shead"><h2>Omsetning og BF % &mdash; {ytd_label}, kjeden</h2>
+  <p>Samme fremstilling for hittil i &aring;r: januar til og med {esc(mnd)},
+     &aring;r for &aring;r.</p></div>
+{legend}
+<div class="plot">{_pair_svg(series_y, "hittil i aar", 20e6)}</div></section>
+<section><div class="shead"><h2>Tallene bak grafen &mdash; hittil i &aring;r</h2></div>
+{_pair_table(series_y)}</section>
 <div class="note"><strong>Sammensetning (brukervalg).</strong> Alle &aring;r
-  viser dagens butikksammensetning, konsistent med resten av rapportserien.
-  PPT-utgavens graf teller med noen &mdash; men ikke alle &mdash; senere
+  viser dagens butikksammensetning &mdash; nedlagte butikker pr {esc(mnd)}
+  {ry} er utelatt fra alle &aring;r, konsistent med resten av rapportserien.
+  PPT-utgavens grafer teller med noen &mdash; men ikke alle &mdash; senere
   nedlagte butikker i eldre &aring;r, etter en BI-klassifisering som ikke
   finnes i kassasystemets API: juli 2021 var hele kjeden (alle butikker i
   drift da) 82,0M og dagens sammensetning 55,4M, mens PPT-grafen viser 61M.
@@ -148,12 +170,12 @@ def summary_page(series, mnd, ry, window):
   minus varekost.</div>
 <script>
 {LR.TIP_JS}
-document.querySelectorAll("#sum g.pt").forEach(g=>bind(g,g.getAttribute("aria-label")));
+document.querySelectorAll(".sumsvg g.pt").forEach(g=>bind(g,g.getAttribute("aria-label")));
 </script>
-<style>#sum .ptitle{{font-size:11px;letter-spacing:.12em;fill:var(--stone);
+<style>.sumsvg .ptitle{{font-size:11px;letter-spacing:.12em;fill:var(--stone);
   font-weight:600;font-family:var(--sans);}}
-#sum .vlab{{font-family:var(--mono);font-size:11px;fill:var(--ink);}}
-#sum g.pt:focus-visible circle{{stroke:var(--ink);stroke-width:2;outline:none;}}</style>"""
+.sumsvg .vlab{{font-family:var(--mono);font-size:11px;fill:var(--ink);}}
+.sumsvg g.pt:focus-visible circle{{stroke:var(--ink);stroke-width:2;outline:none;}}</style>"""
     return page("02_Oppsummering.html", "02", "Omsetning og BF %", window, body)
 
 
@@ -189,13 +211,18 @@ def main():
 
     # ---- 02 Oppsummering: omsetning og BF %, rapportmaaneden aar for aar ----
     sum_years = list(range(2017, ry + 1))
-    asyncio.run(MR.ensure_linjeagg([(y, rm) for y in sum_years]))
-    series = []
+    asyncio.run(MR.ensure_linjeagg(
+        [(y, m) for y in sum_years for m in range(1, rm + 1)]))
+    series_m, series_y = [], []
     for y in sum_years:
         d = MR.linjeagg([(y, rm)])
         if d and d["rev"] > 0:
-            series.append((y, d))
-    files["02_Oppsummering.html"] = summary_page(series, mnd, ry, window)
+            series_m.append((y, d))
+        dy = MR.linjeagg([(y, m) for m in range(1, rm + 1)])
+        if dy and dy["rev"] > 0:
+            series_y.append((y, dy))
+    files["02_Oppsummering.html"] = summary_page(series_m, series_y,
+                                                 mnd, ry, window)
 
     # Web units, derived from the live stock map (user-confirmed taxonomy):
     # 183 = the chain webstore; Shopify stocks are store-owned webstores that
