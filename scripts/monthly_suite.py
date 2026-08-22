@@ -144,9 +144,25 @@ def _no_sort_key(name):
              .replace("æ", "ae"))
 
 
-def _nkl_section(per_year, years, mnd):
-    """The deck's 'Noekkeltall maaned' table: per-store, three years side by
-    side -- brutto, endring, BF %, BF kr, trans, rabatt.
+def linjestore_sum(y, months):
+    """Per-store aggregates summed over several months of one year."""
+    out = {}
+    for m in months:
+        d = MR.linjestore(y, m)
+        if not d:
+            continue
+        for n, a in d["stores"].items():
+            t = out.setdefault(n, {"rev": 0.0, "cost": 0.0, "rab": 0.0,
+                                   "trans": 0})
+            for k in ("rev", "cost", "rab"):
+                t[k] += a[k]
+            t["trans"] += a["trans"]
+    return out
+
+
+def _nkl_section(per_year, years, title, sub):
+    """A 'Noekkeltall' table: per-store, three years side by side --
+    brutto, endring, BF %, BF kr, trans, rabatt.
 
     Money is in TNOK and the 'Hoeyer ' prefix is dropped, so all 17 numeric
     columns fit the page without horizontal scrolling and no store name
@@ -203,11 +219,8 @@ def _nkl_section(per_year, years, mnd):
                        for i, y in enumerate(ys))
 
     yh3 = yhead(years)
-    return f"""<section class="nkl"><div class="shead"><h2>N&oslash;kkeltall m&aring;ned &mdash; {esc(mnd)}</h2>
-  <p>Pr butikk, {y0}&ndash;{y2}, fra varelinjene. Bel&oslash;p i 1000 kr.
-     Butikkenes nettbutikker og Sj&oslash;lyst herre inng&aring;r i
-     moderbutikken; transaksjoner er linjebaserte og avviker derfor marginalt
-     fra kassetellingen i del 01.</p></div>
+    return f"""<section class="nkl"><div class="shead"><h2>{title}</h2>
+  <p>{sub}</p></div>
 <div class="tw"><table>
   <thead>
     <tr><th></th><th class="grp gs" colspan="3">Brutto omsetning</th>
@@ -316,10 +329,24 @@ def main():
         if dy and dy["rev"] > 0:
             series_y.append((y, dy))
     nkl_years = (ry - 2, ry - 1, ry)
-    asyncio.run(MR.ensure_linjestore([(y, rm) for y in nkl_years]))
-    per_year = {y: (MR.linjestore(y, rm) or {}).get("stores", {})
-                for y in nkl_years}
-    nkl = _nkl_section(per_year, nkl_years, mnd)
+    asyncio.run(MR.ensure_linjestore(
+        [(y, m) for y in nkl_years for m in range(1, rm + 1)]))
+    sub = ("Pr butikk, {per}, fra varelinjene. Bel&oslash;p i 1000 kr. "
+           "Butikkenes nettbutikker og Sj&oslash;lyst herre inng&aring;r i "
+           "moderbutikken; transaksjoner er linjebaserte og avviker derfor "
+           "marginalt fra kassetellingen i del 01.")
+    per_m = {y: (MR.linjestore(y, rm) or {}).get("stores", {})
+             for y in nkl_years}
+    nkl = _nkl_section(
+        per_m, nkl_years,
+        f"N&oslash;kkeltall m&aring;ned &mdash; {esc(mnd)}",
+        sub.format(per=f"{esc(mnd)} {nkl_years[0]}&ndash;{ry}"))
+    if rm > 1:
+        per_ytd = {y: linjestore_sum(y, range(1, rm + 1)) for y in nkl_years}
+        nkl += _nkl_section(
+            per_ytd, nkl_years,
+            f"N&oslash;kkeltall hittil i &aring;r &mdash; januar&ndash;{esc(mnd)}",
+            sub.format(per=f"januar&ndash;{esc(mnd)}, {nkl_years[0]}&ndash;{ry}"))
     files["02_Oppsummering.html"] = summary_page(series_m, series_y, nkl,
                                                  mnd, ry, window)
 

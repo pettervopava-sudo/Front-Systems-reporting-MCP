@@ -48,6 +48,12 @@ STOCK_STORE = {
     145: "Høyer Grimstad", 2175: "Høyer Gulskogen",
     2239: "Høyer Harstad", 2794: "Høyer Harstad",
     213: "Høyer Haugesund", 3856: "Høyer Kvadrat", 3229: "Høyer Paleet",
+    1584: "Høyer Kvadrat",  # forgjengerenheten paa Kvadrat (dimensjonsnavn i
+                            # dag "Fashion Outlet"; deckets rad "tidl Collabs").
+                            # Bevist av deckets YTD-tabell 2024: 3856+1584
+                            # treffer Kvadrat-raden og kjedetotalen paa kronen.
+                            # Collabs LAGUNEN (1642) er en annen, nedlagt butikk.
+
     2100: "Høyer Sandefjord", 148: "Høyer Sjølyst", 153: "Høyer Solsiden",
     144: "Høyer Sjølyst",  # tidl. "Sjoelyst herre", slaatt sammen; handlet t.o.m. 2024
 
