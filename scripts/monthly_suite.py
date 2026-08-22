@@ -261,12 +261,13 @@ def summary_page(series_m, series_y, nkl, mnd, ry, window):
 <div class="note"><strong>Sammensetning (brukervalg).</strong> Alle &aring;r
   viser dagens butikksammensetning &mdash; nedlagte butikker pr {esc(mnd)}
   {ry} er utelatt fra alle &aring;r, konsistent med resten av rapportserien.
-  Sj&oslash;lyst herre inng&aring;r historisk i H&oslash;yer Sj&oslash;lyst,
-  som i PPT-rapporten. PPT-utgavens grafer teller med noen &mdash; men ikke
-  alle &mdash; senere nedlagte butikker i eldre &aring;r, etter en
-  BI-klassifisering som ikke finnes i kassasystemets API: juli 2021 var hele
-  kjeden (alle butikker i drift da) 82,0M og dagens sammensetning 56,6M,
-  mens PPT-grafen viser 61M. Fra 2025 er definisjonene sammenfallende.
+  Sj&oslash;lyst herre inng&aring;r historisk i H&oslash;yer Sj&oslash;lyst
+  og Kvadrats forgjengerenhet i H&oslash;yer Kvadrat, som i PPT-rapporten.
+  PPT-utgavens grafer teller med noen &mdash; men ikke alle &mdash; senere
+  nedlagte butikker i eldre &aring;r, etter en BI-klassifisering som ikke
+  finnes i kassasystemets API: juli 2021 var hele kjeden (alle butikker i
+  drift da) 82,0M og dagens sammensetning 57,5M, mens PPT-grafen viser 61M.
+  Fra 2025 er definisjonene sammenfallende.
   BF = netto omsetning (eks. mva) minus varekost.</div>
 <script>
 {LR.TIP_JS}
