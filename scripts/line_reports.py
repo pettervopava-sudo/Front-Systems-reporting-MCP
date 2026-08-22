@@ -49,6 +49,8 @@ STOCK_STORE = {
     2239: "Høyer Harstad", 2794: "Høyer Harstad",
     213: "Høyer Haugesund", 3856: "Høyer Kvadrat", 3229: "Høyer Paleet",
     2100: "Høyer Sandefjord", 148: "Høyer Sjølyst", 153: "Høyer Solsiden",
+    144: "Høyer Sjølyst",  # tidl. "Sjoelyst herre", slaatt sammen; handlet t.o.m. 2024
+
     203: "Høyer Sørlandssenteret", 193: "Høyer Stadionparken",
     150: "Høyer Storo", 151: "Høyer Strømmen", 5368: "Høyer Strømmen",
     181: "Høyer Trondheim", 2014: "Høyer Trondheim", 183: "Høyer Webshop",

@@ -45,11 +45,15 @@ section,.note,.kpis{break-inside:avoid-page;}
 /* the 02 chart pair is taller than a landscape page together with its mast;
    cap its height so masthead + chart share the first page of the part */
 svg.sumsvg{max-height:420px;margin:0 auto;}
-/* the 14-column month matrix is wider than landscape A4 even zoomed; shrink
+/* the noekkeltall table (17 numeric columns) and the 14-column month matrix
+   are wider than landscape A4 even zoomed; shrink
    just that section's table so okt-des are not clipped off the page edge */
 section:has(svg#monthly) table{font-size:9px;}
 section:has(svg#monthly) th.r,section:has(svg#monthly) td.r{padding-left:6px;}
 section:has(svg#monthly) th{padding-right:6px;}
+section.nkl table{font-size:8px;}
+section.nkl th.r,section.nkl td.r{padding-left:5px;}
+section.nkl th{padding-right:5px;}
 """
 
 

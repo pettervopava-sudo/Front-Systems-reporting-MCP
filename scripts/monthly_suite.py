@@ -137,8 +137,84 @@ def _pair_table(series):
   <tbody>{rows}</tbody></table></div>"""
 
 
-def summary_page(series_m, series_y, mnd, ry, window):
-    """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD."""
+def _no_sort_key(name):
+    """Mirror the deck's collation: oe/aa sort with o/a, not after z."""
+    s = name.replace("Høyer ", "").lower()
+    return (s.replace("ø", "o").replace("å", "a")
+             .replace("æ", "ae"))
+
+
+def _nkl_section(per_year, years, mnd):
+    """The deck's 'Noekkeltall maaned' table: per-store, three years side by
+    side -- brutto, endring, BF %, BF kr, trans, rabatt."""
+    names = sorted({n for d in per_year.values() for n in d},
+                   key=_no_sort_key)
+    y0, y1, y2 = years
+
+    def cell(y, name):
+        return per_year.get(y, {}).get(name)
+
+    def num(v):
+        return f"<td class='num r'>{nf(v)}</td>" if v is not None else \
+            "<td class='num r'>&ndash;</td>"
+
+    rows = ""
+    for n in names:
+        c = {y: cell(y, n) for y in years}
+        bf = {y: (a["rev"] / 1.25 - a["cost"]) if a else None
+              for y, a in c.items()}
+        bfp_ = {y: (bf[y] / (a["rev"] / 1.25) * 100 if a and a["rev"] else None)
+                for y, a in c.items()}
+        chg = {y: (MR.pct(c[y]["rev"], c[p]["rev"])
+                   if c[y] and c[p] and c[p]["rev"] else "&ndash;")
+               for y, p in ((y1, y0), (y2, y1))}
+        rows += ("<tr><td>" + esc(n) + "</td>"
+                 + "".join(num(c[y] and c[y]["rev"]) for y in years)
+                 + f"<td class='num r'>{chg[y1]}</td>"
+                 + f"<td class='num r'>{chg[y2]}</td>"
+                 + "".join(f"<td class='num r'>{p1(bfp_[y])}</td>"
+                           if bfp_[y] is not None else
+                           "<td class='num r'>&ndash;</td>" for y in years)
+                 + "".join(num(bf[y]) for y in years)
+                 + "".join(num(c[y] and c[y]["trans"]) for y in years)
+                 + "".join(num(c[y] and c[y]["rab"]) for y in years)
+                 + "</tr>")
+    tot = {y: {k: sum(a[k] for a in per_year.get(y, {}).values())
+               for k in ("rev", "cost", "rab", "trans")} for y in years}
+    tbf = {y: tot[y]["rev"] / 1.25 - tot[y]["cost"] for y in years}
+    rows += ("<tr class='total'><td>Sum kjeden</td>"
+             + "".join(f"<td class='num r'>{nf(tot[y]['rev'])}</td>" for y in years)
+             + f"<td class='num r'>{MR.pct(tot[y1]['rev'], tot[y0]['rev'])}</td>"
+             + f"<td class='num r'>{MR.pct(tot[y2]['rev'], tot[y1]['rev'])}</td>"
+             + "".join(f"<td class='num r'>{p1(tbf[y] / (tot[y]['rev'] / 1.25) * 100)}</td>"
+                       for y in years)
+             + "".join(f"<td class='num r'>{nf(tbf[y])}</td>" for y in years)
+             + "".join(f"<td class='num r'>{nf(tot[y]['trans'])}</td>" for y in years)
+             + "".join(f"<td class='num r'>{nf(tot[y]['rab'])}</td>" for y in years)
+             + "</tr>")
+    yh = "".join(f"<th class='r'>{y}</th>" for y in years)
+    return f"""<section class="nkl"><div class="shead"><h2>N&oslash;kkeltall m&aring;ned &mdash; {esc(mnd)}</h2>
+  <p>Pr butikk, {y0}&ndash;{y2}, fra varelinjene. Butikkenes nettbutikker og
+     Sj&oslash;lyst herre (t.o.m. 2024) inng&aring;r i moderbutikken; transaksjoner
+     er linjebaserte og avviker derfor marginalt fra kassetellingen i del 01.</p></div>
+<div class="tw"><table>
+  <thead>
+    <tr><th></th><th class="grp" colspan="3">Brutto omsetning</th>
+      <th class="grp" colspan="2">Endring</th>
+      <th class="grp" colspan="3">BF %</th>
+      <th class="grp" colspan="3">BF i kroner</th>
+      <th class="grp" colspan="3">Trans</th>
+      <th class="grp" colspan="3">Rabatt i kroner</th></tr>
+    <tr><th>Butikk</th>{yh}
+      <th class="r">{y1}</th><th class="r">{y2}</th>
+      {yh}{yh}{yh}{yh}</tr>
+  </thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
+
+def summary_page(series_m, series_y, nkl, mnd, ry, window):
+    """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD --
+    plus the per-store Noekkeltall table at the bottom."""
     ytd_label = ("hittil i &aring;r (januar)" if mnd == "januar"
                  else f"hittil i &aring;r (januar&ndash;{esc(mnd)})")
     legend = (f'<div class="legend"><span><i class="sw" '
@@ -159,15 +235,17 @@ def summary_page(series_m, series_y, mnd, ry, window):
 <div class="plot">{_pair_svg(series_y, "hittil i aar", 20e6)}</div></section>
 <section><div class="shead"><h2>Tallene bak grafen &mdash; hittil i &aring;r</h2></div>
 {_pair_table(series_y)}</section>
+{nkl}
 <div class="note"><strong>Sammensetning (brukervalg).</strong> Alle &aring;r
   viser dagens butikksammensetning &mdash; nedlagte butikker pr {esc(mnd)}
   {ry} er utelatt fra alle &aring;r, konsistent med resten av rapportserien.
-  PPT-utgavens grafer teller med noen &mdash; men ikke alle &mdash; senere
-  nedlagte butikker i eldre &aring;r, etter en BI-klassifisering som ikke
-  finnes i kassasystemets API: juli 2021 var hele kjeden (alle butikker i
-  drift da) 82,0M og dagens sammensetning 55,4M, mens PPT-grafen viser 61M.
-  Fra 2025 er definisjonene sammenfallende. BF = netto omsetning (eks. mva)
-  minus varekost.</div>
+  Sj&oslash;lyst herre inng&aring;r historisk i H&oslash;yer Sj&oslash;lyst,
+  som i PPT-rapporten. PPT-utgavens grafer teller med noen &mdash; men ikke
+  alle &mdash; senere nedlagte butikker i eldre &aring;r, etter en
+  BI-klassifisering som ikke finnes i kassasystemets API: juli 2021 var hele
+  kjeden (alle butikker i drift da) 82,0M og dagens sammensetning 56,6M,
+  mens PPT-grafen viser 61M. Fra 2025 er definisjonene sammenfallende.
+  BF = netto omsetning (eks. mva) minus varekost.</div>
 <script>
 {LR.TIP_JS}
 document.querySelectorAll(".sumsvg g.pt").forEach(g=>bind(g,g.getAttribute("aria-label")));
@@ -175,7 +253,10 @@ document.querySelectorAll(".sumsvg g.pt").forEach(g=>bind(g,g.getAttribute("aria
 <style>.sumsvg .ptitle{{font-size:11px;letter-spacing:.12em;fill:var(--stone);
   font-weight:600;font-family:var(--sans);}}
 .sumsvg .vlab{{font-family:var(--mono);font-size:11px;fill:var(--ink);}}
-.sumsvg g.pt:focus-visible circle{{stroke:var(--ink);stroke-width:2;outline:none;}}</style>"""
+.sumsvg g.pt:focus-visible circle{{stroke:var(--ink);stroke-width:2;outline:none;}}
+.nkl table{{font-size:12px;}}
+.nkl th.r,.nkl td.r{{padding-left:10px;}}
+.nkl th{{padding-right:8px;}}</style>"""
     return page("02_Oppsummering.html", "02", "Omsetning og BF %", window, body)
 
 
@@ -221,7 +302,12 @@ def main():
         dy = MR.linjeagg([(y, m) for m in range(1, rm + 1)])
         if dy and dy["rev"] > 0:
             series_y.append((y, dy))
-    files["02_Oppsummering.html"] = summary_page(series_m, series_y,
+    nkl_years = (ry - 2, ry - 1, ry)
+    asyncio.run(MR.ensure_linjestore([(y, rm) for y in nkl_years]))
+    per_year = {y: (MR.linjestore(y, rm) or {}).get("stores", {})
+                for y in nkl_years}
+    nkl = _nkl_section(per_year, nkl_years, mnd)
+    files["02_Oppsummering.html"] = summary_page(series_m, series_y, nkl,
                                                  mnd, ry, window)
 
     # Web units, derived from the live stock map (user-confirmed taxonomy):

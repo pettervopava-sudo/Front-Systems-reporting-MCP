@@ -220,6 +220,70 @@ async def ensure_linjeagg(months):
         await client.aclose()
 
 
+LINJESTORE_SELECT = ["SALEID", "STOCKID_FK", "Qty", "Price", "Cost", "Discount"]
+
+
+def linjestore(y, m):
+    f = CACHE / f"linjestore_{y:04d}-{m:02d}.json"
+    return json.load(open(f)) if f.exists() else None
+
+
+async def ensure_linjestore(months):
+    """Per-deck-store line aggregates for the given months, cached.
+
+    Same composition as linjeagg (stocks in line_reports.STOCK_STORE), but
+    split per store and with a line-derived transaction count (distinct
+    SALEID). Stocks outside the map are kept under 'unmapped' with their
+    display names, so composition questions can be answered from the cache.
+    """
+    import line_reports as LR
+    missing = [(y, m) for y, m in months if linjestore(y, m) is None]
+    if not missing:
+        return
+    client = FrontSystemsClient(load_config())
+    sem = asyncio.Semaphore(3)
+
+    async def one(y, m):
+        d0 = dt.date(y, m, 1)
+        nxt = dt.date(y + 1, 1, 1) if m == 12 else dt.date(y, m + 1, 1)
+        async with sem:
+            rows = await client.fetch_raw("Saleslines", {
+                "from": f"'{d0}'", "to": f"'{nxt - dt.timedelta(days=1)}'",
+                "$select": ",".join(LINJESTORE_SELECT + ["Stock"]),
+                "$top": "2000000"})
+        stores, unmapped = {}, {}
+        for r in rows:
+            stock = r["STOCKID_FK"]
+            name = LR.STOCK_STORE.get(stock)
+            if name is None:
+                a = unmapped.setdefault(str(stock), {
+                    "name": r.get("Stock") or "?", "rev": 0.0, "cost": 0.0,
+                    "rab": 0.0, "sales": set()})
+            else:
+                a = stores.setdefault(name, {"rev": 0.0, "cost": 0.0,
+                                             "rab": 0.0, "sales": set()})
+            q = float(r["Qty"] or 0)
+            a["rev"] += round(q * float(r["Price"] or 0), 2)
+            a["cost"] += round(q * float(r["Cost"] or 0), 2)
+            a["rab"] += round(q * float(r["Discount"] or 0), 2)
+            a["sales"].add(r["SALEID"])
+        def pack(d):
+            return {k: {"rev": round(v["rev"], 2), "cost": round(v["cost"], 2),
+                        "rab": round(v["rab"], 2), "trans": len(v["sales"]),
+                        **({"name": v["name"]} if "name" in v else {})}
+                    for k, v in d.items()}
+        json.dump({"month": f"{y:04d}-{m:02d}", "stores": pack(stores),
+                   "unmapped": pack(unmapped)},
+                  open(CACHE / f"linjestore_{y:04d}-{m:02d}.json", "w"))
+        print(f"  linjestore {y:04d}-{m:02d}: {len(stores)} butikker",
+              file=sys.stderr)
+
+    try:
+        await asyncio.gather(*(one(y, m) for y, m in missing))
+    finally:
+        await client.aclose()
+
+
 class Agg:
     """Per-store [trans, revenue] over a set of months, deck conventions applied."""
 
