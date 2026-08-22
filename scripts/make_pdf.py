@@ -51,9 +51,10 @@ svg.sumsvg{max-height:420px;margin:0 auto;}
 section:has(svg#monthly) table{font-size:9px;}
 section:has(svg#monthly) th.r,section:has(svg#monthly) td.r{padding-left:6px;}
 section:has(svg#monthly) th{padding-right:6px;}
-section.nkl table{font-size:8px;}
+section.nkl table{font-size:9.5px;}
 section.nkl th.r,section.nkl td.r{padding-left:5px;}
-section.nkl th{padding-right:5px;}
+section.nkl th,section.nkl td{padding-right:4px;}
+section.nkl .gs{padding-left:9px;}
 """
 
 

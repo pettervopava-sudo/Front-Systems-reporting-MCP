@@ -146,21 +146,25 @@ def _no_sort_key(name):
 
 def _nkl_section(per_year, years, mnd):
     """The deck's 'Noekkeltall maaned' table: per-store, three years side by
-    side -- brutto, endring, BF %, BF kr, trans, rabatt."""
+    side -- brutto, endring, BF %, BF kr, trans, rabatt.
+
+    Money is in TNOK and the 'Hoeyer ' prefix is dropped, so all 17 numeric
+    columns fit the page without horizontal scrolling and no store name
+    wraps. Group boundaries are hairlines drawn by the 'gs' (group start)
+    class, from the group header down through every row."""
     names = sorted({n for d in per_year.values() for n in d},
                    key=_no_sort_key)
     y0, y1, y2 = years
 
-    def cell(y, name):
-        return per_year.get(y, {}).get(name)
+    def td(txt, gs=False):
+        return f"<td class='num r{' gs' if gs else ''}'>{txt}</td>"
 
-    def num(v):
-        return f"<td class='num r'>{nf(v)}</td>" if v is not None else \
-            "<td class='num r'>&ndash;</td>"
+    def money(v):
+        return nf(v / 1000) if v is not None else "&ndash;"
 
     rows = ""
     for n in names:
-        c = {y: cell(y, n) for y in years}
+        c = {y: per_year.get(y, {}).get(n) for y in years}
         bf = {y: (a["rev"] / 1.25 - a["cost"]) if a else None
               for y, a in c.items()}
         bfp_ = {y: (bf[y] / (a["rev"] / 1.25) * 100 if a and a["rev"] else None)
@@ -168,46 +172,51 @@ def _nkl_section(per_year, years, mnd):
         chg = {y: (MR.pct(c[y]["rev"], c[p]["rev"])
                    if c[y] and c[p] and c[p]["rev"] else "&ndash;")
                for y, p in ((y1, y0), (y2, y1))}
-        rows += ("<tr><td>" + esc(n) + "</td>"
-                 + "".join(num(c[y] and c[y]["rev"]) for y in years)
-                 + f"<td class='num r'>{chg[y1]}</td>"
-                 + f"<td class='num r'>{chg[y2]}</td>"
-                 + "".join(f"<td class='num r'>{p1(bfp_[y])}</td>"
-                           if bfp_[y] is not None else
-                           "<td class='num r'>&ndash;</td>" for y in years)
-                 + "".join(num(bf[y]) for y in years)
-                 + "".join(num(c[y] and c[y]["trans"]) for y in years)
-                 + "".join(num(c[y] and c[y]["rab"]) for y in years)
+        rows += ("<tr><td>" + esc(n.replace("Høyer ", "")) + "</td>"
+                 + "".join(td(money(c[y] and c[y]["rev"]), gs=(y == y0))
+                           for y in years)
+                 + td(chg[y1], gs=True) + td(chg[y2])
+                 + "".join(td(p1(bfp_[y]) if bfp_[y] is not None else "&ndash;",
+                              gs=(y == y0)) for y in years)
+                 + "".join(td(money(bf[y]), gs=(y == y0)) for y in years)
+                 + "".join(td(nf(c[y]["trans"]) if c[y] else "&ndash;",
+                              gs=(y == y0)) for y in years)
+                 + "".join(td(money(c[y] and c[y]["rab"]), gs=(y == y0))
+                           for y in years)
                  + "</tr>")
     tot = {y: {k: sum(a[k] for a in per_year.get(y, {}).values())
                for k in ("rev", "cost", "rab", "trans")} for y in years}
     tbf = {y: tot[y]["rev"] / 1.25 - tot[y]["cost"] for y in years}
     rows += ("<tr class='total'><td>Sum kjeden</td>"
-             + "".join(f"<td class='num r'>{nf(tot[y]['rev'])}</td>" for y in years)
-             + f"<td class='num r'>{MR.pct(tot[y1]['rev'], tot[y0]['rev'])}</td>"
-             + f"<td class='num r'>{MR.pct(tot[y2]['rev'], tot[y1]['rev'])}</td>"
-             + "".join(f"<td class='num r'>{p1(tbf[y] / (tot[y]['rev'] / 1.25) * 100)}</td>"
-                       for y in years)
-             + "".join(f"<td class='num r'>{nf(tbf[y])}</td>" for y in years)
-             + "".join(f"<td class='num r'>{nf(tot[y]['trans'])}</td>" for y in years)
-             + "".join(f"<td class='num r'>{nf(tot[y]['rab'])}</td>" for y in years)
+             + "".join(td(money(tot[y]["rev"]), gs=(y == y0)) for y in years)
+             + td(MR.pct(tot[y1]["rev"], tot[y0]["rev"]), gs=True)
+             + td(MR.pct(tot[y2]["rev"], tot[y1]["rev"]))
+             + "".join(td(p1(tbf[y] / (tot[y]["rev"] / 1.25) * 100),
+                          gs=(y == y0)) for y in years)
+             + "".join(td(money(tbf[y]), gs=(y == y0)) for y in years)
+             + "".join(td(nf(tot[y]["trans"]), gs=(y == y0)) for y in years)
+             + "".join(td(money(tot[y]["rab"]), gs=(y == y0)) for y in years)
              + "</tr>")
-    yh = "".join(f"<th class='r'>{y}</th>" for y in years)
+
+    def yhead(ys):
+        return "".join(f"<th class='r{' gs' if i == 0 else ''}'>{y}</th>"
+                       for i, y in enumerate(ys))
+
+    yh3 = yhead(years)
     return f"""<section class="nkl"><div class="shead"><h2>N&oslash;kkeltall m&aring;ned &mdash; {esc(mnd)}</h2>
-  <p>Pr butikk, {y0}&ndash;{y2}, fra varelinjene. Butikkenes nettbutikker og
-     Sj&oslash;lyst herre (t.o.m. 2024) inng&aring;r i moderbutikken; transaksjoner
-     er linjebaserte og avviker derfor marginalt fra kassetellingen i del 01.</p></div>
+  <p>Pr butikk, {y0}&ndash;{y2}, fra varelinjene. Bel&oslash;p i 1000 kr.
+     Butikkenes nettbutikker og Sj&oslash;lyst herre inng&aring;r i
+     moderbutikken; transaksjoner er linjebaserte og avviker derfor marginalt
+     fra kassetellingen i del 01.</p></div>
 <div class="tw"><table>
   <thead>
-    <tr><th></th><th class="grp" colspan="3">Brutto omsetning</th>
-      <th class="grp" colspan="2">Endring</th>
-      <th class="grp" colspan="3">BF %</th>
-      <th class="grp" colspan="3">BF i kroner</th>
-      <th class="grp" colspan="3">Trans</th>
-      <th class="grp" colspan="3">Rabatt i kroner</th></tr>
-    <tr><th>Butikk</th>{yh}
-      <th class="r">{y1}</th><th class="r">{y2}</th>
-      {yh}{yh}{yh}{yh}</tr>
+    <tr><th></th><th class="grp gs" colspan="3">Brutto omsetning</th>
+      <th class="grp gs" colspan="2">Endring</th>
+      <th class="grp gs" colspan="3">BF %</th>
+      <th class="grp gs" colspan="3">BF i kroner</th>
+      <th class="grp gs" colspan="3">Trans</th>
+      <th class="grp gs" colspan="3">Rabatt i kroner</th></tr>
+    <tr><th>Butikk</th>{yh3}{yhead((y1, y2))}{yh3}{yh3}{yh3}{yh3}</tr>
   </thead>
   <tbody>{rows}</tbody></table></div></section>"""
 
@@ -255,8 +264,12 @@ document.querySelectorAll(".sumsvg g.pt").forEach(g=>bind(g,g.getAttribute("aria
 .sumsvg .vlab{{font-family:var(--mono);font-size:11px;fill:var(--ink);}}
 .sumsvg g.pt:focus-visible circle{{stroke:var(--ink);stroke-width:2;outline:none;}}
 .nkl table{{font-size:12px;}}
-.nkl th.r,.nkl td.r{{padding-left:10px;}}
-.nkl th{{padding-right:8px;}}</style>"""
+.nkl th.r,.nkl td.r{{padding-left:7px;}}
+.nkl th{{padding-right:5px;}}
+.nkl td{{padding-right:5px;}}
+.nkl td:first-child{{white-space:nowrap;}}
+.nkl .gs{{border-left:1px solid var(--hair);padding-left:12px;}}
+.nkl th.grp{{text-align:center;letter-spacing:.06em;}}</style>"""
     return page("02_Oppsummering.html", "02", "Omsetning og BF %", window, body)
 
 
