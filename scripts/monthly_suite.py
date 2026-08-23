@@ -26,6 +26,7 @@ import collections
 import datetime as dt
 import json
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -328,7 +329,26 @@ def _mnd_section(ry, rm):
   <tbody>{rows}</tbody></table></div></section>"""
 
 
-def _store_bf_chart(per_year, years, mnd):
+NONCHAIN = re.compile(r"BMB|Outlet|test|Pop.?up|IKKE BRUK", re.I)
+
+
+def linjestore_closed(y, months):
+    """The deck's 'Nedlagte butikker' bucket: every unmapped stock except the
+    deck's explicit exclusions (BMB, outlets, pop-ups, test and decommissioned
+    internal stocks), summed over the months."""
+    tot = {"rev": 0.0, "cost": 0.0, "trans": 0}
+    for m in months:
+        d = MR.linjestore(y, m)
+        if not d:
+            continue
+        for a in d["unmapped"].values():
+            if NONCHAIN.search(a["name"]):
+                continue
+            tot["rev"] += a["rev"]; tot["cost"] += a["cost"]; tot["trans"] += a["trans"]
+    return tot
+
+
+def _store_bf_chart(per_year, years, mnd, title, sub, closed=None):
     """Report 03's opening chart: per store, three year panels, each with a
     brutto bar and a BF % bar whose ink density encodes the BF level (the
     deck's gradient, in the suite's palette). Stores sort by the report
@@ -342,9 +362,14 @@ def _store_bf_chart(per_year, years, mnd):
         return (netto - a["cost"]) / netto * 100 if netto else 0.0
     vals = {(y, n): (a["rev"], bfp(a))
             for y, d in per_year.items() for n, a in d.items()}
-    rev_max = max(v[0] for v in vals.values())
-    bf_all = [v[1] for v in vals.values()]
-    bf_lo, bf_hi = min(bf_all), max(bf_all)
+    closed_vals = {}
+    if closed:
+        for y, a in closed.items():
+            if a and a["rev"] > 0:
+                closed_vals[y] = (a["rev"], bfp(a))
+    rev_max = max([v[0] for v in vals.values()] + [v[0] for v in closed_vals.values()])
+    bf_pos = [v[1] for v in vals.values() if v[1] > 0]
+    bf_lo, bf_hi = min(bf_pos), max(bf_pos)
     bf_axis = max(45.0, (bf_hi // 5 + 1) * 5)
     # geometry
     W, L, RH, TOP = 1080, 150, 21, 46
@@ -352,7 +377,7 @@ def _store_bf_chart(per_year, years, mnd):
     LG, GG, LAB = 30, 30, 44                 # lane gap, group gap, label room
     BW = (GW - LG - GG) / 2                  # one bar lane inside a group
     LW = BW - LAB                            # bar length at axis max
-    n_rows = len(names) + 1
+    n_rows = len(names) + 1 + (1 if closed_vals else 0)
     H = TOP + n_rows * RH + 44
     s = [f'<svg class="sbf" viewBox="0 0 {W} {H}" role="img" '
          f'aria-label="Omsetning og BF pr butikk, {esc(mnd)} {years[0]}&ndash;{ry}">']
@@ -367,11 +392,11 @@ def _store_bf_chart(per_year, years, mnd):
                  f'text-anchor="middle">BF %</text>')
         # axis ticks at bottom
         by = TOP + n_rows * RH + 14
-        for t in (0, 5, 10):
+        step = 5 if rev_max <= 15e6 else 10 if rev_max <= 30e6 else 20
+        for t in range(0, int(rev_max / 1e6) + 1, step):
             tx = gx + LW * t * 1e6 / rev_max
-            if tx <= gx + LW + 1:
-                s.append(f'<text x="{tx:.1f}" y="{by}" '
-                         f'text-anchor="{"start" if t == 0 else "middle"}">{t}M</text>')
+            s.append(f'<text x="{tx:.1f}" y="{by}" '
+                     f'text-anchor="{"start" if t == 0 else "middle"}">{t}M</text>')
         for t in (0, 20, 40):
             tx = gx + BW + LG + LW * t / bf_axis
             s.append(f'<text x="{tx:.1f}" y="{by}" '
@@ -398,7 +423,8 @@ def _store_bf_chart(per_year, years, mnd):
             fill2 = "var(--stone)" if gray else "var(--ox)"
             o2 = 1.0 if gray else op(bf)
             m_lab = f"{rv / 1e6:.1f}".replace(".", ",") + "M"
-            p_lab = f"{bf:.1f}".replace(".", ",") + "%"
+            p_lab = f"{bf:.1f}".replace(".", ",").replace("-", "&minus;") + "%"
+            neg = " neg" if bf < 0 else ""
             s.append(f'<g class="pt" tabindex="0" role="img" aria-label="{aria}">'
                      f'<rect x="{gx:.1f}" y="{yy + 4:.1f}" width="{max(w1, 1):.1f}" '
                      f'height="{RH - 8}" fill="{fill1}"/>'
@@ -407,7 +433,7 @@ def _store_bf_chart(per_year, years, mnd):
                      f'<rect x="{gx + BW + LG:.1f}" y="{yy + 4:.1f}" '
                      f'width="{max(w2, 1):.1f}" height="{RH - 8}" fill="{fill2}" '
                      f'fill-opacity="{o2:.2f}"/>'
-                     f'<text class="vl" x="{gx + BW + LG + max(w2, 1) + 4:.1f}" '
+                     f'<text class="vl{neg}" x="{gx + BW + LG + max(w2, 1) + 4:.1f}" '
                      f'y="{yy + RH - 6:.1f}">{p_lab}</text></g>')
     for i, n in enumerate(names):
         cells = []
@@ -420,6 +446,16 @@ def _store_bf_chart(per_year, years, mnd):
                               f"{esc(n)} {esc(mnd)} {y}: brutto {nf(v[0])} kr, "
                               f"BF {v[1]:.1f}%".replace(".", ",")))
         row(i, esc(n.replace("Høyer ", "")), cells)
+    r = len(names)
+    if closed_vals:
+        cells = []
+        for y in years:
+            v = closed_vals.get(y)
+            cells.append((None, None, "") if v is None else
+                         (v[0], v[1], f"Nedlagte butikker {esc(mnd)} {y}: brutto "
+                                      f"{nf(v[0])} kr, BF {v[1]:.1f}%".replace(".", ",")))
+        row(r, "Nedlagte butikker", cells)
+        r += 1
     cells = []
     for y in years:
         d = per_year[y]
@@ -430,14 +466,13 @@ def _store_bf_chart(per_year, years, mnd):
         cells.append((rev / len(d), (netto - cost) / netto * 100,
                       f"Kjeden {esc(mnd)} {y}: snitt pr butikk {nf(rev / len(d))} kr, "
                       f"BF {(netto - cost) / netto * 100:.1f}%".replace(".", ",")))
-    row(len(names), "Snitt butikk / kjeden BF", cells, gray=True)
+    row(r, "Snitt butikk / kjeden BF", cells, gray=True)
     s.append("</svg>")
     svg = "".join(s)
     lo = f"{bf_lo:.1f}".replace(".", ","); hi = f"{bf_hi:.1f}".replace(".", ",")
-    return f"""<section><div class="shead"><h2>Omsetning og BF pr butikk &mdash; {esc(mnd)}</h2>
-  <p>Bruttoomsetning og BF % pr butikk, {years[0]}&ndash;{ry}, fra varelinjene.
-     Sortert etter {esc(mnd)} {ry}. M&oslash;rkere BF-s&oslash;yle = h&oslash;yere
-     BF % (skala {lo}&nbsp;%&ndash;{hi}&nbsp;%). Siste rad: snitt pr butikk og
+    return f"""<section><div class="shead"><h2>{title}</h2>
+  <p>{sub} M&oslash;rkere BF-s&oslash;yle = h&oslash;yere BF %
+     (skala {lo}&nbsp;%&ndash;{hi}&nbsp;%). Siste rad: snitt pr butikk og
      kjedens BF %.</p></div>
 <div class="legend"><span><i class="sw" style="background:var(--slate)"></i>Brutto omsetning</span>
   <span><i class="sw" style="background:var(--ox)"></i>BF %</span></div>
@@ -447,6 +482,7 @@ def _store_bf_chart(per_year, years, mnd):
 .sbf .yh{{font-family:var(--sans);font-size:12px;font-weight:700;fill:var(--ink);letter-spacing:.04em;}}
 .sbf .vl{{font-family:var(--mono);font-size:10px;fill:var(--ink2);}}
 .sbf .na{{font-family:var(--mono);font-size:10px;fill:var(--stone);}}
+.sbf .vl.neg{{fill:var(--ox);font-weight:700;}}
 .sbf .rl{{stroke:var(--hair2);stroke-width:1;}}
 .sbf g.pt:focus-visible rect{{stroke:var(--ink);stroke-width:1.5;outline:none;}}</style>"""
 
@@ -654,7 +690,20 @@ def main():
                      f"<td class='num r'>{nf(n_c)}</td>"
                      f"<td class='num r'>{nf(s_y)}</td></tr>")
 
-    sbf = _store_bf_chart(per_m, nkl_years, mnd)
+    sbf = _store_bf_chart(
+        per_m, nkl_years, mnd,
+        f"Omsetning og BF pr butikk &mdash; {esc(mnd)}",
+        f"Bruttoomsetning og BF % pr butikk, {esc(mnd)} {nkl_years[0]}&ndash;{ry}, "
+        f"fra varelinjene. Sortert etter {esc(mnd)} {ry}.")
+    if rm > 1:
+        closed = {y: linjestore_closed(y, range(1, rm + 1)) for y in nkl_years}
+        sbf += _store_bf_chart(
+            per_ytd, nkl_years, f"hittil i {esc(mnd)}",
+            "Omsetning og BF pr butikk &mdash; YTD",
+            f"Hittil i &aring;r, januar&ndash;{esc(mnd)} {nkl_years[0]}&ndash;{ry}, "
+            f"fra varelinjene. Sortert etter {ry}. Nedlagte butikker vises samlet "
+            f"for sammenligning og inng&aring;r ikke i snitt/kjede-raden.",
+            closed=closed)
     body = f"""{sbf}
 <section><div class="shead"><h2>Omsetning pr butikk &mdash; {esc(mnd)}</h2>
   <p>H&oslash;yer Webshop er kjedens nettbutikk. Butikkenes egne nettbutikker (Shopify) inng&aring;r i moderbutikkens tall &mdash; se egen tabell under.{closed_note}</p></div>
