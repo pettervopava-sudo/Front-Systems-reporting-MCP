@@ -61,6 +61,15 @@ STOCK_STORE = {
     150: "Høyer Storo", 151: "Høyer Strømmen", 5368: "Høyer Strømmen",
     181: "Høyer Trondheim", 2014: "Høyer Trondheim", 183: "Høyer Webshop",
     279: "Høyer Bergen",  # linjedata-stock; avviklet 2026-08-01, med t.o.m. juli
+    # Kanal-enheter som deckets BI teller under moderbutikken -- bevist mot
+    # BF-i-kroner-siden 2023 (alle fire paa 0,1M): "CR"-enhetene (senere
+    # IKKE BRUK) og Paleet Zalando. Bodoe 2 (3456) og Byporten Herre (2559)
+    # er bevist UTENFOR (decket matcher uten dem).
+    2841: "Høyer Bergen",    # IKKE BRUK Hoeyer CR Bergen
+    3589: "Høyer Paleet",    # Hoeyer Paleet Zalando
+    2888: "Høyer Strømmen",  # IKKE BRUK Hoeyer CR Stroemmen
+    3002: "Høyer Sjølyst",   # IKKE BRUK Hoeyer CR Sjoelyst dame
+    3003: "Høyer Sjølyst",   # IKKE BRUK Hoeyer CR Sjoelyst herre
 }
 EXCLUDED_STOCKS = {1333, 1901, 2957, 5442}  # BMB + Outlet Nydalen + Teststore
 SYSTEM_SELLERS = {"webshop", "shopify integrasjon", "shopify", "integrasjon"}
