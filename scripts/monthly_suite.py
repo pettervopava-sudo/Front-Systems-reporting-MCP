@@ -487,6 +487,9 @@ def _store_bf_chart(per_year, years, mnd, title, sub, closed=None):
 .sbf g.pt:focus-visible rect{{stroke:var(--ink);stroke-width:1.5;outline:none;}}</style>"""
 
 YEAR_FILL = ("var(--stone)", "var(--slate)", "var(--ox)")  # oldest .. report year
+HARSTAD_NOTE = ("Harstad inkluderer Shopify-kanalen, hvis kostpriser i "
+                "kassasystemet gir lavere BF enn i BI-verkt&oslash;yet bak "
+                "PPT-rapporten.")
 
 
 def _store_bfp_chart(per_year, years, mnd, title, sub, closed=None):
@@ -794,8 +797,18 @@ def main():
         f"BF % pr butikk &mdash; {esc(mnd)}",
         f"Bruttofortjeneste i prosent av netto pr butikk, {esc(mnd)} "
         f"{nkl_years[0]}&ndash;{ry}, fra varelinjene. Sortert etter {esc(mnd)} {ry}. "
-        f"Nedlagte butikker vises samlet og inng&aring;r ikke i kjeden.",
+        f"Nedlagte butikker vises samlet og inng&aring;r ikke i kjeden. "
+        f"{HARSTAD_NOTE}",
         closed=closed_m)
+    if rm > 1:
+        sbf += _store_bfp_chart(
+            per_ytd, nkl_years, f"hittil i {esc(mnd)}",
+            "BF % pr butikk &mdash; YTD",
+            f"Bruttofortjeneste i prosent av netto pr butikk, hittil i &aring;r "
+            f"januar&ndash;{esc(mnd)} {nkl_years[0]}&ndash;{ry}, fra varelinjene. "
+            f"Sortert etter {ry}. Nedlagte butikker vises samlet og inng&aring;r "
+            f"ikke i kjeden. {HARSTAD_NOTE}",
+            closed=closed)
     body = f"""{sbf}
 <section><div class="shead"><h2>Omsetning pr butikk &mdash; {esc(mnd)}</h2>
   <p>H&oslash;yer Webshop er kjedens nettbutikk. Butikkenes egne nettbutikker (Shopify) inng&aring;r i moderbutikkens tall &mdash; se egen tabell under.{closed_note}</p></div>
