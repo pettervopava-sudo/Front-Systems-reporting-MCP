@@ -486,6 +486,90 @@ def _store_bf_chart(per_year, years, mnd, title, sub, closed=None):
 .sbf .rl{{stroke:var(--hair2);stroke-width:1;}}
 .sbf g.pt:focus-visible rect{{stroke:var(--ink);stroke-width:1.5;outline:none;}}</style>"""
 
+YEAR_FILL = ("var(--stone)", "var(--slate)", "var(--ox)")  # oldest .. report year
+
+
+def _store_bfp_chart(per_year, years, mnd, title, sub, closed=None):
+    """Report 03's BF %-only chart: one panel per year, one bar per store
+    coloured by year, stores sorted by the report year's BF %, then the
+    deck's 'Nedlagte butikker' bucket and the chain."""
+    ry = years[-1]
+    def bfp(a):
+        netto = a["rev"] / 1.25
+        return (netto - a["cost"]) / netto * 100 if netto else None
+    vals = {(y, n): bfp(a) for y, d in per_year.items() for n, a in d.items()}
+    names = sorted({n for d in per_year.values() for n in d},
+                   key=lambda n: -(vals.get((ry, n)) if vals.get((ry, n)) is not None else -1e9))
+    extra = []
+    if closed:
+        cv = {y: bfp(a) for y, a in closed.items() if a and a["rev"] > 0}
+        if cv:
+            extra.append(("Nedlagte butikker", cv, False))
+    chain = {}
+    for y in years:
+        d = per_year[y]
+        if d:
+            rev = sum(a["rev"] for a in d.values()); cost = sum(a["cost"] for a in d.values())
+            chain[y] = bfp({"rev": rev, "cost": cost})
+    extra.append(("Kjeden", chain, True))
+    allv = [v for v in vals.values() if v is not None] + \
+           [v for _, cv, _ in extra for v in cv.values() if v is not None]
+    axis = max(50.0, (max(allv) // 10 + 1) * 10)
+    W, L, RH, TOP = 1080, 150, 21, 46
+    GW = (W - L - 8) / len(years)
+    GG, LAB = 30, 44
+    LW = GW - GG - LAB
+    n_rows = len(names) + len(extra)
+    H = TOP + n_rows * RH + 44
+    s = [f'<svg class="sbf" viewBox="0 0 {W} {H}" role="img" '
+         f'aria-label="BF-prosent pr butikk, {esc(mnd)} {years[0]}&ndash;{ry}">',
+         '<g class="axis">']
+    by = TOP + n_rows * RH + 14
+    for gi, y in enumerate(years):
+        gx = L + gi * GW
+        s.append(f'<text x="{gx + LW / 2:.1f}" y="16" text-anchor="middle" class="yh">{y}</text>')
+        s.append(f'<text x="{gx + LW / 2:.1f}" y="{TOP - 12}" text-anchor="middle">BF %</text>')
+        for t in range(0, int(axis) + 1, 10):
+            tx = gx + LW * t / axis
+            s.append(f'<text x="{tx:.1f}" y="{by}" '
+                     f'text-anchor="{"start" if t == 0 else "middle"}">{t}%</text>')
+    s.append('</g>')
+    def row(i, label, cells, bold=False):
+        yy = TOP + i * RH
+        s.append(f'<line class="rl" x1="{L - 6}" x2="{W - 8}" y1="{yy + RH:.1f}" y2="{yy + RH:.1f}"/>')
+        s.append(f'<text class="sl{" tot" if bold else ""}" x="{L - 10}" '
+                 f'y="{yy + RH - 6:.1f}" text-anchor="end">{label}</text>')
+        for gi, (y, v, aria) in enumerate(cells):
+            gx = L + gi * GW
+            if v is None:
+                s.append(f'<text class="na" x="{gx + 4}" y="{yy + RH - 6:.1f}">&ndash;</text>')
+                continue
+            w = LW * v / axis if v > 0 else 0
+            lab = f"{v:.1f}".replace(".", ",").replace("-", "&minus;") + "%"
+            neg = " neg" if v < 0 else ""
+            s.append(f'<g class="pt" tabindex="0" role="img" aria-label="{aria}">'
+                     f'<rect x="{gx:.1f}" y="{yy + 4:.1f}" width="{max(w, 1):.1f}" '
+                     f'height="{RH - 8}" fill="{"var(--ink2)" if bold else YEAR_FILL[gi]}"/>'
+                     f'<text class="vl{neg}" x="{gx + max(w, 1) + 4:.1f}" '
+                     f'y="{yy + RH - 6:.1f}">{lab}</text></g>')
+    for i, n in enumerate(names):
+        cells = [(y, vals.get((y, n)),
+                  f"{esc(n)} {esc(mnd)} {y}: BF {vals.get((y, n)):.1f}%".replace(".", ",")
+                  if vals.get((y, n)) is not None else "") for y in years]
+        row(i, esc(n.replace("Høyer ", "")), cells)
+    for j, (label, cv, bold) in enumerate(extra):
+        cells = [(y, cv.get(y),
+                  f"{label} {esc(mnd)} {y}: BF {cv.get(y):.1f}%".replace(".", ",")
+                  if cv.get(y) is not None else "") for y in years]
+        row(len(names) + j, label, cells, bold=bold)
+    s.append("</svg>")
+    legend = "".join(f'<span><i class="sw" style="background:{YEAR_FILL[i]}"></i>{y}</span>'
+                     for i, y in enumerate(years))
+    return f"""<section><div class="shead"><h2>{title}</h2><p>{sub}</p></div>
+<div class="legend">{legend}</div>
+<div class="plot">{"".join(s)}</div></section>"""
+
+
 def summary_page(series_m, series_y, nkl, mnd, ry, window):
     """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD --
     plus the per-store Noekkeltall table at the bottom."""
@@ -704,6 +788,14 @@ def main():
             f"fra varelinjene. Sortert etter {ry}. Nedlagte butikker vises samlet "
             f"for sammenligning og inng&aring;r ikke i snitt/kjede-raden.",
             closed=closed)
+    closed_m = {y: linjestore_closed(y, [rm]) for y in nkl_years}
+    sbf += _store_bfp_chart(
+        per_m, nkl_years, mnd,
+        f"BF % pr butikk &mdash; {esc(mnd)}",
+        f"Bruttofortjeneste i prosent av netto pr butikk, {esc(mnd)} "
+        f"{nkl_years[0]}&ndash;{ry}, fra varelinjene. Sortert etter {esc(mnd)} {ry}. "
+        f"Nedlagte butikker vises samlet og inng&aring;r ikke i kjeden.",
+        closed=closed_m)
     body = f"""{sbf}
 <section><div class="shead"><h2>Omsetning pr butikk &mdash; {esc(mnd)}</h2>
   <p>H&oslash;yer Webshop er kjedens nettbutikk. Butikkenes egne nettbutikker (Shopify) inng&aring;r i moderbutikkens tall &mdash; se egen tabell under.{closed_note}</p></div>
