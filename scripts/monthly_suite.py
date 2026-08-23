@@ -176,7 +176,8 @@ def _nkl_section(per_year, years, title, sub):
         return f"<td class='num r{' gs' if gs else ''}'>{txt}</td>"
 
     def money(v):
-        return nf(v / 1000) if v is not None else "&ndash;"
+        return (nf(v / 1000) + "<span class='k'>k</span>") if v is not None \
+            else "&ndash;"
 
     rows = ""
     for n in names:
@@ -223,12 +224,12 @@ def _nkl_section(per_year, years, title, sub):
   <p>{sub}</p></div>
 <div class="tw"><table>
   <thead>
-    <tr><th></th><th class="grp gs" colspan="3">Brutto omsetning</th>
+    <tr><th></th><th class="grp gs" colspan="3">Brutto omsetning &middot; 1000 kr</th>
       <th class="grp gs" colspan="2">Endring</th>
       <th class="grp gs" colspan="3">BF %</th>
-      <th class="grp gs" colspan="3">BF i kroner</th>
-      <th class="grp gs" colspan="3">Trans</th>
-      <th class="grp gs" colspan="3">Rabatt i kroner</th></tr>
+      <th class="grp gs" colspan="3">BF &middot; 1000 kr</th>
+      <th class="grp gs" colspan="3">Trans &middot; antall</th>
+      <th class="grp gs" colspan="3">Rabatt &middot; 1000 kr</th></tr>
     <tr><th>Butikk</th>{yh3}{yhead((y1, y2))}{yh3}{yh3}{yh3}{yh3}</tr>
   </thead>
   <tbody>{rows}</tbody></table></div></section>"""
@@ -265,7 +266,7 @@ def _mnd_section(ry, rm):
             return None
         return {k: sum(d[k] for d in ms) for k in ("rev", "bf", "netto", "trans")}
 
-    money = lambda v: nf(v / 1000)
+    money = lambda v: nf(v / 1000) + "<span class='k'>k</span>"
     dash = "&ndash;"
 
     def cells(fn, y, sumv):
@@ -291,21 +292,21 @@ def _mnd_section(ry, rm):
                       + "</td>")
 
     blocks = [
-        ("Brutto omsetning", lambda y: cells(
+        ("Brutto omsetning &middot; 1000 kr", lambda y: cells(
             lambda d: money(d["rev"]), y, money(tot(y)["rev"]) if tot(y) else dash)),
         ("Endring brutto", lambda y: chg_cells("rev", y)),
-        ("BF i kroner", lambda y: cells(
+        ("BF &middot; 1000 kr", lambda y: cells(
             lambda d: money(d["bf"]), y, money(tot(y)["bf"]) if tot(y) else dash)),
         ("Endring BF", lambda y: chg_cells("bf", y)),
         ("BF %", lambda y: cells(
             lambda d: p1(d["bf"] / d["netto"] * 100) if d["netto"] else dash, y,
             p1(tot(y)["bf"] / tot(y)["netto"] * 100) if tot(y) and tot(y)["netto"] else dash)),
-        ("Trans", lambda y: cells(
+        ("Trans &middot; antall", lambda y: cells(
             lambda d: nf(d["trans"]), y, nf(tot(y)["trans"]) if tot(y) else dash)),
-        ("Omsetning pr transaksjon", lambda y: cells(
+        ("Omsetning pr transaksjon &middot; kr", lambda y: cells(
             lambda d: nf(d["rev"] / d["trans"]) if d["trans"] else dash, y,
             nf(tot(y)["rev"] / tot(y)["trans"]) if tot(y) and tot(y)["trans"] else dash)),
-        ("Netto omsetning", lambda y: cells(
+        ("Netto omsetning &middot; 1000 kr", lambda y: cells(
             lambda d: money(d["netto"]), y, money(tot(y)["netto"]) if tot(y) else dash)),
     ]
     rows = ""
@@ -317,7 +318,8 @@ def _mnd_section(ry, rm):
     mh = "".join(f"<th class='r'>{m}</th>" for m in MND_KORT)
     mnd = MR.MND[rm - 1]
     return f"""<section class="mnd"><div class="shead"><h2>Generelle n&oslash;kkeltall &mdash; m&aring;nedsvis</h2>
-  <p>Kjeden, {years[0]}&ndash;{ry}, fra varelinjene. Bel&oslash;p i 1000 kr.
+  <p>Kjeden, {years[0]}&ndash;{ry}, fra varelinjene. Bel&oslash;p merket <i>k</i> er i 1000 kr;
+     trans er antall og omsetning pr transaksjon er i kr.
      {ry} til og med {esc(mnd)}; Sum-kolonnen for {ry} er hittil i &aring;r,
      og endringen m&aring;les mot samme m&aring;neder &aring;ret f&oslash;r.
      Netto = brutto / 1,25; BF = netto minus varekost; trans er linjebaserte.</p></div>
@@ -368,12 +370,13 @@ document.querySelectorAll(".sumsvg g.pt").forEach(g=>bind(g,g.getAttribute("aria
   font-weight:600;font-family:var(--sans);}}
 .sumsvg .vlab{{font-family:var(--mono);font-size:11px;fill:var(--ink);}}
 .sumsvg g.pt:focus-visible circle{{stroke:var(--ink);stroke-width:2;outline:none;}}
-.nkl table{{font-size:12px;}}
-.nkl th.r,.nkl td.r{{padding-left:7px;}}
-.nkl th{{padding-right:5px;}}
-.nkl td{{padding-right:5px;}}
+.k{{color:var(--stone);font-size:.82em;margin-left:1px;}}
+.nkl table{{font-size:11.5px;}}
+.nkl th.r,.nkl td.r{{padding-left:6px;}}
+.nkl th{{padding-right:4px;}}
+.nkl td{{padding-right:4px;}}
 .nkl td:first-child{{white-space:nowrap;}}
-.nkl .gs{{border-left:1px solid var(--hair);padding-left:12px;}}
+.nkl td.gs,.nkl th.gs{{border-left:1px solid var(--hair);padding-left:7px;}}
 .nkl th.grp{{text-align:center;letter-spacing:.06em;}}
 .mnd table{{font-size:12px;}}
 .mnd th.r,.mnd td.r{{padding-left:6px;}}
@@ -431,7 +434,8 @@ def main():
     nkl_years = (ry - 2, ry - 1, ry)
     asyncio.run(MR.ensure_linjestore(
         [(y, m) for y in nkl_years for m in range(1, rm + 1)]))
-    sub = ("Pr butikk, {per}, fra varelinjene. Bel&oslash;p i 1000 kr. "
+    sub = ("Pr butikk, {per}, fra varelinjene. Bel&oslash;p merket <i>k</i> er i 1000 kr; "
+           "transaksjoner er antall. "
            "Butikkenes nettbutikker og Sj&oslash;lyst herre inng&aring;r i "
            "moderbutikken; transaksjoner er linjebaserte og avviker derfor "
            "marginalt fra kassetellingen i del 01.")
