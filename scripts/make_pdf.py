@@ -55,6 +55,10 @@ section.nkl table{font-size:9.5px;}
 section.nkl th.r,section.nkl td.r{padding-left:5px;}
 section.nkl th,section.nkl td{padding-right:4px;}
 section.nkl .gs{padding-left:9px;}
+section.mnd table{font-size:9px;}
+section.mnd th.r,section.mnd td.r{padding-left:4px;}
+section.mnd th,section.mnd td{padding-right:3px;}
+section.mnd .sum{padding-left:8px;}
 """
 
 

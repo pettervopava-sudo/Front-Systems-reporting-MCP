@@ -234,6 +234,97 @@ def _nkl_section(per_year, years, title, sub):
   <tbody>{rows}</tbody></table></div></section>"""
 
 
+
+MND_KORT = ["jan", "feb", "mar", "apr", "mai", "jun", "jul",
+            "aug", "sep", "okt", "nov", "des"]
+
+
+def _mnd_section(ry, rm):
+    """The deck's 'Generelle noekkeltall - maanedsvis' matrix: eight chain
+    figures x three years against the twelve months plus a year total.
+    Money in TNOK; the report year stops at the report month (period
+    purity), its Sum column is hittil i aar and its change is measured
+    against the same months of the year before."""
+    years = (ry - 2, ry - 1, ry)
+    data = {}
+    for y in years:
+        for m in range(1, 13):
+            if y == ry and m > rm:
+                continue
+            la = MR.linjeagg([(y, m)])
+            ls = MR.linjestore(y, m)
+            if la is None or ls is None:
+                continue
+            data[(y, m)] = {"rev": la["rev"], "bf": la["bf"],
+                            "netto": la["netto"],
+                            "trans": sum(a["trans"] for a in ls["stores"].values())}
+
+    def tot(y, upto=12):
+        ms = [data[(y, m)] for m in range(1, upto + 1) if (y, m) in data]
+        if not ms:
+            return None
+        return {k: sum(d[k] for d in ms) for k in ("rev", "bf", "netto", "trans")}
+
+    money = lambda v: nf(v / 1000)
+    dash = "&ndash;"
+
+    def cells(fn, y, sumv):
+        out = ""
+        for m in range(1, 13):
+            d = data.get((y, m))
+            out += f"<td class='num r'>{fn(d) if d else ''}</td>"
+        return out + f"<td class='num r sum'>{sumv}</td>"
+
+    def chg_cells(key, y):
+        if y == years[0]:
+            return cells(lambda d: "", y, "")
+        out = ""
+        for m in range(1, 13):
+            d, p = data.get((y, m)), data.get((y - 1, m))
+            out += ("<td class='num r'>"
+                    + (MR.pct(d[key], p[key]) if d and p and p[key] else "")
+                    + "</td>")
+        upto = rm if y == ry else 12
+        t, tp = tot(y, upto), tot(y - 1, upto)
+        return out + ("<td class='num r sum'>"
+                      + (MR.pct(t[key], tp[key]) if t and tp and tp[key] else "")
+                      + "</td>")
+
+    blocks = [
+        ("Brutto omsetning", lambda y: cells(
+            lambda d: money(d["rev"]), y, money(tot(y)["rev"]) if tot(y) else dash)),
+        ("Endring brutto", lambda y: chg_cells("rev", y)),
+        ("BF i kroner", lambda y: cells(
+            lambda d: money(d["bf"]), y, money(tot(y)["bf"]) if tot(y) else dash)),
+        ("Endring BF", lambda y: chg_cells("bf", y)),
+        ("BF %", lambda y: cells(
+            lambda d: p1(d["bf"] / d["netto"] * 100) if d["netto"] else dash, y,
+            p1(tot(y)["bf"] / tot(y)["netto"] * 100) if tot(y) and tot(y)["netto"] else dash)),
+        ("Trans", lambda y: cells(
+            lambda d: nf(d["trans"]), y, nf(tot(y)["trans"]) if tot(y) else dash)),
+        ("Omsetning pr transaksjon", lambda y: cells(
+            lambda d: nf(d["rev"] / d["trans"]) if d["trans"] else dash, y,
+            nf(tot(y)["rev"] / tot(y)["trans"]) if tot(y) and tot(y)["trans"] else dash)),
+        ("Netto omsetning", lambda y: cells(
+            lambda d: money(d["netto"]), y, money(tot(y)["netto"]) if tot(y) else dash)),
+    ]
+    rows = ""
+    for label, fn in blocks:
+        for i, y in enumerate(years):
+            cls = " class='blk'" if i == 0 else ""
+            lab = (f"<td class='mlabel' rowspan='3'>{label}</td>" if i == 0 else "")
+            rows += f"<tr{cls}>{lab}<td class='num yr'>{y}</td>{fn(y)}</tr>"
+    mh = "".join(f"<th class='r'>{m}</th>" for m in MND_KORT)
+    mnd = MR.MND[rm - 1]
+    return f"""<section class="mnd"><div class="shead"><h2>Generelle n&oslash;kkeltall &mdash; m&aring;nedsvis</h2>
+  <p>Kjeden, {years[0]}&ndash;{ry}, fra varelinjene. Bel&oslash;p i 1000 kr.
+     {ry} til og med {esc(mnd)}; Sum-kolonnen for {ry} er hittil i &aring;r,
+     og endringen m&aring;les mot samme m&aring;neder &aring;ret f&oslash;r.
+     Netto = brutto / 1,25; BF = netto minus varekost; trans er linjebaserte.</p></div>
+<div class="tw"><table>
+  <thead><tr><th></th><th>&Aring;r</th>{mh}<th class="r sum">Sum</th></tr></thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
 def summary_page(series_m, series_y, nkl, mnd, ry, window):
     """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD --
     plus the per-store Noekkeltall table at the bottom."""
@@ -283,7 +374,15 @@ document.querySelectorAll(".sumsvg g.pt").forEach(g=>bind(g,g.getAttribute("aria
 .nkl td{{padding-right:5px;}}
 .nkl td:first-child{{white-space:nowrap;}}
 .nkl .gs{{border-left:1px solid var(--hair);padding-left:12px;}}
-.nkl th.grp{{text-align:center;letter-spacing:.06em;}}</style>"""
+.nkl th.grp{{text-align:center;letter-spacing:.06em;}}
+.mnd table{{font-size:12px;}}
+.mnd th.r,.mnd td.r{{padding-left:6px;}}
+.mnd th,.mnd td{{padding-right:4px;}}
+.mnd td.mlabel{{font-weight:700;vertical-align:top;white-space:normal;
+  max-width:11ch;font-family:var(--sans);padding-top:8px;}}
+.mnd td.yr{{color:var(--stone);}}
+.mnd tr.blk td{{border-top:1px solid var(--ink2);}}
+.mnd .sum{{border-left:1px solid var(--hair);padding-left:12px;font-weight:600;}}</style>"""
     return page("02_Oppsummering.html", "02", "Omsetning og BF %", window, body)
 
 
@@ -348,6 +447,12 @@ def main():
             per_ytd, nkl_years,
             f"N&oslash;kkeltall hittil i &aring;r &mdash; januar&ndash;{esc(mnd)}",
             sub.format(per=f"januar&ndash;{esc(mnd)}, {nkl_years[0]}&ndash;{ry}"))
+    # Generelle noekkeltall maanedsvis: full prior years, report year to rm
+    mnd_months = [(y, m) for y in nkl_years
+                  for m in range(1, (rm if y == ry else 12) + 1)]
+    asyncio.run(MR.ensure_linjeagg(mnd_months))
+    asyncio.run(MR.ensure_linjestore(mnd_months))
+    nkl += _mnd_section(ry, rm)
     files["02_Oppsummering.html"] = summary_page(series_m, series_y, nkl,
                                                  mnd, ry, window)
 
