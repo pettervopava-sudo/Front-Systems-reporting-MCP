@@ -643,7 +643,7 @@ def summary_page(series_m, series_y, nkl, mnd, ry, window):
   PPT-utgavens grafer teller med noen &mdash; men ikke alle &mdash; senere
   nedlagte butikker i eldre &aring;r, etter en BI-klassifisering som ikke
   finnes i kassasystemets API: juli 2021 var hele kjeden (alle butikker i
-  drift da) 82,0M og dagens sammensetning 57,5M, mens PPT-grafen viser 61M.
+  drift da) 82,0M og dagens sammensetning 57,6M, mens PPT-grafen viser 61M.
   Fra 2025 er definisjonene sammenfallende.
   BF = netto omsetning (eks. mva) minus varekost.</div>
 <script>
