@@ -517,13 +517,16 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
     then the deck's 'Nedlagte butikker' bucket and a chain row.
 
     metric 'bfp': BF % of netto, chain row = the chain's BF %.
-    metric 'bfkr': BF in kroner, chain row = average per store."""
+    metric 'bfkr': BF in kroner, chain row = average per store.
+    metric 'snitt': omsetning pr transaksjon, chain row = the chain's."""
     ry = years[-1]
     n_y = len(years)
     def netto_bf(a):
         netto = a["rev"] / 1.25
         return netto, netto - a["cost"]
     def val(a):
+        if metric == "snitt":
+            return a["rev"] / a["trans"] if a.get("trans") else None
         netto, bf = netto_bf(a)
         if metric == "bfp":
             return bf / netto * 100 if netto else None
@@ -543,20 +546,28 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
             rev = sum(a["rev"] for a in d.values()); cost = sum(a["cost"] for a in d.values())
             if metric == "bfp":
                 chain[y] = val({"rev": rev, "cost": cost})
+            elif metric == "snitt":
+                tr = sum(a.get("trans", 0) for a in d.values())
+                chain[y] = rev / tr if tr else None
             else:
                 chain[y] = (rev / 1.25 - cost) / len(d)
-    extra.append(("Kjeden" if metric == "bfp" else "Snitt pr butikk", chain, True))
+    extra.append(("Snitt pr butikk" if metric == "bfkr" else "Kjeden", chain, True))
     allv = [v for v in vals.values() if v is not None] + \
            [v for _, cv, _ in extra for v in cv.values() if v is not None]
     vmax = max(allv)
     if metric == "bfp":
         axis, step, unit = max(50.0, (vmax // 10 + 1) * 10), 10, lambda t: f"{t}%"
+    elif metric == "snitt":
+        step = 1000
+        axis, unit = (vmax // step + 1) * step, lambda t: nf(t)
     else:
         step = 1e6 if vmax <= 3.5e6 else 5e6 if vmax <= 20e6 else 10e6
         axis, unit = (vmax // step + 1) * step, lambda t: f"{t / 1e6:.0f}M"
     def lab(v):
         if metric == "bfp":
             return f"{v:.1f}".replace(".", ",").replace("-", "&minus;") + "%"
+        if metric == "snitt":
+            return nf(v)
         return f"{v / 1e6:.1f}".replace(".", ",").replace("-", "&minus;") + "M"
     W, L, RH, TOP = 1080, 150, 21, 46
     GW = (W - L - 8) / n_y
@@ -567,7 +578,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
     s = [f'<svg class="sbf" viewBox="0 0 {W} {H}" role="img" '
          f'aria-label="{title} {years[0]}&ndash;{ry}">', '<g class="axis">']
     by = TOP + n_rows * RH + 14
-    head = "BF %" if metric == "bfp" else "BF i kroner"
+    head = {"bfp": "BF %", "bfkr": "BF i kroner",
+            "snitt": "Omsetning pr transaksjon"}[metric]
     for gi, y in enumerate(years):
         gx = L + gi * GW
         s.append(f'<text x="{gx + LW / 2:.1f}" y="16" text-anchor="middle" class="yh">{y}</text>')
@@ -605,6 +617,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
     def aria(label, y, v):
         if v is None:
             return ""
+        if metric == "snitt":
+            return f"{label} {esc(mnd)} {y}: snitt {nf(v)} kr pr transaksjon"
         return (f"{label} {esc(mnd)} {y}: " + ("BF " + lab(v) if metric == "bfp"
                 else "BF " + nf(v) + " kr"))
     for i, n in enumerate(names):
@@ -883,6 +897,21 @@ def main():
             f"januar&ndash;{esc(mnd)} {y4[0]}&ndash;{ry}, fra varelinjene. Sortert "
             f"etter {ry}. Nedlagte butikker vises samlet; siste rad er snitt pr butikk.",
             "bfkr", closed={y: linjestore_closed(y, range(1, rm + 1)) for y in y4})
+    sbf += _store_metric_chart(
+        per_m, nkl_years, mnd,
+        f"Snittsalg pr butikk &mdash; {esc(mnd)}",
+        f"Omsetning pr transaksjon (brutto, linjebasert) pr butikk, {esc(mnd)} "
+        f"{nkl_years[0]}&ndash;{ry}. Sortert etter {esc(mnd)} {ry}; siste rad er "
+        f"kjedens snitt.",
+        "snitt")
+    if rm > 1:
+        sbf += _store_metric_chart(
+            per_ytd, nkl_years, f"hittil i {esc(mnd)}",
+            "Snittsalg pr butikk &mdash; YTD",
+            f"Omsetning pr transaksjon (brutto, linjebasert) pr butikk, hittil i "
+            f"&aring;r januar&ndash;{esc(mnd)} {nkl_years[0]}&ndash;{ry}. Sortert "
+            f"etter {ry}; siste rad er kjedens snitt.",
+            "snitt")
     body = f"""{sbf}
 <section><div class="shead"><h2>Omsetning pr butikk &mdash; {esc(mnd)}</h2>
   <p>H&oslash;yer Webshop er kjedens nettbutikk. Butikkenes egne nettbutikker (Shopify) inng&aring;r i moderbutikkens tall &mdash; se egen tabell under.{closed_note}</p></div>
