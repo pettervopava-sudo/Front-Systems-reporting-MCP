@@ -763,6 +763,145 @@ def _tiar_section(ry, rm, mnd):
   <tbody>{rows}</tbody></table></div></section>"""
 
 
+def _sesong_bucket(season, ry):
+    """Deck buckets: the six newest season codes, Eldre, Base, Carry-overs.
+    Pre/Main/High collapse into the code (the deck's 'PRE og MAIN slaatt
+    sammen')."""
+    t = str(season or "").strip()
+    if not t or t in ("0", "1", "None") or t.lower() == "diverse":
+        return "Base"
+    if "carry" in t.lower():
+        return "Carry-overs"
+    code = t.split()[0]
+    if code.isdigit() and len(code) == 4:
+        c = int(code)
+        newest = [(ry - 2000 - k) * 100 + ss for k in (2, 1, 0) for ss in (1, 2)]
+        if c in newest:
+            return code
+        return "Eldre sesonger"
+    return "Base"
+
+
+def _sesong_table(rows_by_key, title, sub, ry):
+    """One sesong matrix: per store, share of the row's revenue per bucket
+    and BF % per bucket."""
+    newest = [(ry - 2000 - k) * 100 + ss for k in (2, 1, 0) for ss in (1, 2)]
+    buckets = (["Eldre sesonger"] + [str(c) for c in newest]
+               + ["Base", "Carry-overs"])
+    def blab(b):
+        if b.isdigit():
+            return f"{b} ({'SS' if int(b) % 100 == 1 else 'AW'})"
+        return esc(b)
+    def nokey(n):
+        t = n.lower().replace("æ", "{").replace("ø", "|").replace("å", "}")
+        return (n == "Nedlagte butikker", t)
+    rows = ""
+    order = sorted((k for k in rows_by_key if k != "Sum kjeden"), key=nokey)
+    for name in order + ["Sum kjeden"]:
+        d = rows_by_key[name]
+        tot_rev = sum(v[0] for v in d.values())
+        tot_cost = sum(v[1] for v in d.values())
+        if not tot_rev:
+            continue
+        cls = " class='total'" if name == "Sum kjeden" else ""
+        cells_pct = ""
+        cells_bf = ""
+        for i, b in enumerate(buckets):
+            rev, cost = d.get(b, (0.0, 0.0))
+            gs = " gs" if i == 0 else ""
+            if rev:
+                cells_pct += (f"<td class='num r{gs}'>"
+                              f"{p1(rev / tot_rev * 100)}</td>")
+                netto = rev / 1.25
+                cells_bf += f"<td class='num r{gs}'>{p1((netto - cost) / netto * 100)}</td>"
+            else:
+                cells_pct += f"<td class='num r{gs}'></td>"
+                cells_bf += f"<td class='num r{gs}'></td>"
+        netto_t = tot_rev / 1.25
+        bf_tot = f"<td class='num r gs'>{p1((netto_t - tot_cost) / netto_t * 100)}</td>"
+        rows += (f"<tr{cls}><td>" + esc(name.replace("Høyer ", "")) + "</td>"
+                 + cells_pct + cells_bf + bf_tot + "</tr>")
+    bh = "".join(f"<th class='r{' gs' if i == 0 else ''}'>{blab(b)}</th>"
+                 for i, b in enumerate(buckets))
+    return f"""<section class="nkl"><div class="shead"><h2>{title}</h2><p>{sub}</p></div>
+<div class="tw"><table>
+  <thead>
+    <tr><th></th><th class="grp gs" colspan="{len(buckets)}">Andel av butikkens omsetning</th>
+      <th class="grp gs" colspan="{len(buckets) + 1}">BF %</th></tr>
+    <tr><th>Butikk</th>{bh}{bh}<th class="r gs">Total</th></tr>
+  </thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
+
+def _sesong_sections(ry, rm, mnd):
+    """The two per-store sesong matrices, built from the klines caches and
+    injected into report 04 after its existing content."""
+    import json as _json
+    def collect(months):
+        by = {}
+        for m in months:
+            f = MR.CACHE / f"klines_{ry:04d}-{m:02d}.json"
+            if not f.exists():
+                return None
+            for r in _json.load(open(f)):
+                store = LR.STOCK_STORE.get(r["STOCKID_FK"])
+                name = store if store else "Nedlagte butikker"
+                b = _sesong_bucket(r.get("Season"), ry)
+                q = float(r["Qty"] or 0)
+                rev = q * float(r["Price"] or 0)
+                cost = q * float(r["Cost"] or 0)
+                for key in (name, "Sum kjeden"):
+                    d = by.setdefault(key, {})
+                    v = d.get(b, (0.0, 0.0))
+                    d[b] = (v[0] + rev, v[1] + cost)
+        return by
+    sub = ("Andel hver sesong utgj&oslash;r av butikkens omsetning (radene "
+           "summerer til 100&nbsp;%) og BF % pr sesong. PRE, MAIN og HIGH er "
+           "sl&aring;tt sammen pr sesongkode; Base er basis/uspesifisert.")
+    m = collect([rm])
+    yt = collect(range(1, rm + 1))
+    if m is None or yt is None:
+        return ""
+    note = f"""<div class="note"><strong>Avvik mot PPT-utgaven.</strong>
+  Sesong er kassasystemets sesongkode p&aring; hver varelinje. PPT-utgavens
+  BI-verkt&oslash;y beriker i tillegg varer som i kassen er kodet som basis
+  med produktregisterets egentlige sesong &mdash; det flytter 1&ndash;2 % av
+  omsetningen, mest fra Base til Eldre sesonger; produktattributtet finnes
+  ikke i API-et. PPT-utgavens YTD-side dekker dessuten et annet og lengre
+  vindu enn kalender&aring;ret (nedlagte butikker st&aring;r der med store
+  andeler p&aring; 2024-sesonger); tabellen her er januar&ndash;{esc(mnd)}
+  {ry}.</div>"""
+    return (_sesong_table(m, f"Salg og BF fordelt p&aring; sesong &mdash; {esc(mnd)}",
+                          f"{esc(mnd)} {ry}. " + sub, ry)
+            + _sesong_table(yt, "Salg og BF fordelt p&aring; sesong &mdash; YTD",
+                            f"Januar&ndash;{esc(mnd)} {ry}. " + sub, ry)
+            + note)
+
+
+def inject_sesong(ry, rm, mnd, outdir):
+    """Append/replace the per-store sesong matrices in report 04."""
+    f = pathlib.Path(outdir) / "04_Sesonger.html"
+    if not f.exists():
+        return
+    html = f.read_text(encoding="ascii")
+    block = _sesong_sections(ry, rm, mnd)
+    if not block:
+        return
+    start = "<!-- SESONG-BUTIKK START -->"
+    end = "<!-- SESONG-BUTIKK END -->"
+    payload = start + block + end
+    if start in html:
+        import re as _re
+        html = _re.sub(_re.escape(start) + ".*?" + _re.escape(end),
+                       lambda _m: payload, html, flags=_re.S)
+    else:
+        html = html.replace("<footer>", payload + "\n<footer>", 1)
+    if not html.isascii():
+        raise SystemExit("04 injection not pure ASCII")
+    f.write_text(html, encoding="ascii")
+    print(f"  injiserte sesongmatriser i {f}", file=sys.stderr)
+
+
 def summary_page(series_m, series_y, nkl, mnd, ry, window):
     """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD --
     plus the per-store Noekkeltall table at the bottom."""
@@ -1142,6 +1281,10 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
 <div class="note"><strong>St&oslash;rste kunder</strong> er bevisst utelatt:
   det krever kundeidentifikatorer, og rapportserien henter ikke kundedata.</div>"""
     files["08_Diverse.html"] = page("08_Diverse.html", "08", "Diverse", window, body)
+
+    import hoyer_nye_kpi as HK
+    asyncio.run(HK.ensure_klines([(ry, m) for m in range(1, rm + 1)]))
+    inject_sesong(ry, rm, mnd, outdir)
 
     for fname, content in files.items():
         if not content.isascii():

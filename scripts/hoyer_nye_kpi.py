@@ -41,7 +41,7 @@ CACHE = ROOT / "reports" / "cache"
 VAT = 1.25
 KSEL = ["SALEID", "SID", "STOCKID_FK", "Qty", "Price", "Cost", "Brand",
         "Group", "Season", "Name", "EAN", "Employee", "SaleDate",
-        "SaleDateTime", "OrderLineReasons"]
+        "SaleDateTime", "OrderLineReasons", "Stock"]
 #: kjente felles-/systembrukere; i tillegg flagges brukernavn som inneholder
 #: et butikknavn (Arendal, Storo, "Paleet Man" ...) som fellesbrukere.
 FELLES = {"webshop", "shopify integrasjon", "shopify", "integrasjon",
@@ -75,7 +75,16 @@ async def ensure_klines(months):
             rows = await client.fetch_raw("Saleslines", {
                 "from": f"'{d0}'", "to": f"'{nxt - dt.timedelta(days=1)}'",
                 "$select": ",".join(KSEL), "$top": "2000000"})
-        keep = [r for r in rows if r["STOCKID_FK"] in LR.STOCK_STORE]
+        # chain stores, plus closed Hoeyer stores (for the Nedlagte rows in
+        # the sesong tables); BMB/outlets/pop-ups/test stay out.
+        import monthly_suite as MS
+        def keeps(r):
+            if r["STOCKID_FK"] in LR.STOCK_STORE:
+                return True
+            if r["STOCKID_FK"] in LR.EXCLUDED_STOCKS:
+                return False
+            return not MS.NONCHAIN.search(r.get("Stock") or "")
+        keep = [r for r in rows if keeps(r)]
         json.dump(keep, open(CACHE / f"klines_{y:04d}-{m:02d}.json", "w"),
                   ensure_ascii=False)
         print(f"  klines {y:04d}-{m:02d}: {len(keep):,} linjer", file=sys.stderr)
