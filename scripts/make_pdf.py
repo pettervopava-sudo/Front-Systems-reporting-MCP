@@ -105,6 +105,8 @@ def main() -> None:
     ap.add_argument("--out", default=None)
     ap.add_argument("--html", action="store_true",
                     help="also write the bound suite as one HTML file")
+    ap.add_argument("--html-only", action="store_true",
+                    help="only the combined HTML; no Chrome, no PDF")
     args = ap.parse_args()
     ry, rm = int(args.month[:4]), int(args.month[5:7])
     import monthly_report as MR
@@ -196,6 +198,8 @@ def main() -> None:
             if leaks:
                 raise SystemExit(f"period leakage in part {i+1}: {set(leaks)}")
             contents.append(content)
+            if args.html_only:
+                continue
             html = tdp / f"part{i}.html"
             html.write_text(print_shell(content), encoding="ascii",
                             errors="strict")
@@ -204,20 +208,22 @@ def main() -> None:
             pdfs.append(pdf)
             print(f"  part {i+1}: {pdf.stat().st_size:,} bytes", file=sys.stderr)
 
-        from pypdf import PdfWriter
-        writer = PdfWriter()
-        for pdf in pdfs:
-            writer.append(str(pdf))
-        with open(out, "wb") as fh:
-            writer.write(fh)
-    if args.html:
+        if not args.html_only:
+            from pypdf import PdfWriter
+            writer = PdfWriter()
+            for pdf in pdfs:
+                writer.append(str(pdf))
+            with open(out, "wb") as fh:
+                writer.write(fh)
+    if args.html or args.html_only:
         anchors = [(f"del-{p.name[:2]}" if p is not None else "del-0407")
                    for p in parts]
         combine_html(contents, out.with_suffix(".html"), anchors)
-    from pypdf import PdfReader
-    pages = len(PdfReader(str(out)).pages)
-    print(f"  merged: {out} ({pages} pages, {out.stat().st_size:,} bytes)",
-          file=sys.stderr)
+    if not args.html_only:
+        from pypdf import PdfReader
+        pages = len(PdfReader(str(out)).pages)
+        print(f"  merged: {out} ({pages} pages, {out.stat().st_size:,} bytes)",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

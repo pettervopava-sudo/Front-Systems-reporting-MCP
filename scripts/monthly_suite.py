@@ -640,6 +640,129 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
 def _store_bfp_chart(per_year, years, mnd, title, sub, closed=None):
     return _store_metric_chart(per_year, years, mnd, title, sub, "bfp", closed)
 
+def rolling_sum(pairs):
+    """Per-store aggregates summed over arbitrary (year, month) pairs."""
+    out = {}
+    for y, m in pairs:
+        d = MR.linjestore(y, m)
+        if not d:
+            continue
+        for n, a in d["stores"].items():
+            t = out.setdefault(n, {"rev": 0.0, "cost": 0.0, "rab": 0.0,
+                                   "trans": 0})
+            for k in ("rev", "cost", "rab"):
+                t[k] += a[k]
+            t["trans"] += a["trans"]
+    return out
+
+
+def _rolling_table(title, sub, agg):
+    rows = ""
+    order = sorted(agg, key=lambda n: -agg[n]["rev"])
+    for n in order:
+        a = agg[n]
+        netto = a["rev"] / 1.25
+        bf = netto - a["cost"]
+        rows += ("<tr><td>" + esc(n.replace("Høyer ", "")) + "</td>"
+                 f"<td class='num r'>{nf(a['rev'])}</td>"
+                 f"<td class='num r'>{nf(bf)}</td>"
+                 f"<td class='num r'>{p1(bf / netto * 100) if netto else '&ndash;'}</td>"
+                 f"<td class='num r'>{nf(a['rab'])}</td>"
+                 f"<td class='num r'>{nf(a['trans'])}</td>"
+                 f"<td class='num r'>{nf(a['rev'] / a['trans']) if a['trans'] else '&ndash;'}</td></tr>")
+    rev = sum(a["rev"] for a in agg.values())
+    cost = sum(a["cost"] for a in agg.values())
+    rab = sum(a["rab"] for a in agg.values())
+    tr = sum(a["trans"] for a in agg.values())
+    netto = rev / 1.25
+    bf = netto - cost
+    rows += ("<tr class='total'><td>Sum kjeden</td>"
+             f"<td class='num r'>{nf(rev)}</td>"
+             f"<td class='num r'>{nf(bf)}</td>"
+             f"<td class='num r'>{p1(bf / netto * 100)}</td>"
+             f"<td class='num r'>{nf(rab)}</td>"
+             f"<td class='num r'>{nf(tr)}</td>"
+             f"<td class='num r'>{nf(rev / tr)}</td></tr>")
+    return f"""<section><div class="shead"><h2>{title}</h2><p>{sub}</p></div>
+<div class="tw"><table>
+  <thead><tr><th>Butikk</th><th class="r">Brutto omsetning</th>
+    <th class="r">BF i kroner</th><th class="r">BF %</th>
+    <th class="r">Rabatt i kroner</th><th class="r">Trans</th>
+    <th class="r">Snitt pr trans</th></tr></thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
+
+def _rolling_sections(ry, rm):
+    def window(back):
+        pairs = []
+        y, m = ry, rm
+        for _ in range(12 * back):
+            pairs.append((y, m))
+            y, m = (y - 1, 12) if m == 1 else (y, m - 1)
+        return pairs[12 * (back - 1):]
+    p12 = window(1)
+    p24 = window(2)
+    lab = lambda ps: (f"{MND_KORT[ps[-1][1] - 1]} {ps[-1][0]}"
+                      f"&ndash;{MND_KORT[ps[0][1] - 1]} {ps[0][0]}")
+    return (_rolling_table(
+                "Rullerende omsetning &mdash; siste 12 mnd",
+                f"{lab(p12)}, fra varelinjene. Sortert etter brutto omsetning.",
+                rolling_sum(p12))
+            + _rolling_table(
+                "Rullerende omsetning &mdash; siste 24&ndash;12 mnd",
+                f"{lab(p24)}, fra varelinjene. Sortert etter brutto omsetning.",
+                rolling_sum(p24)))
+
+
+def _tiar_section(ry, rm, mnd):
+    """Omsetning per butikk for the report month, last ten years, with
+    year-over-year change. Nedlagte butikker as one aggregated row."""
+    years = list(range(ry - 9, ry + 1))
+    data = {y: (MR.linjestore(y, rm) or {}).get("stores", {}) for y in years}
+    closed = {y: linjestore_closed(y, [rm]) for y in years}
+    names = sorted({n for d in data.values() for n in d},
+                   key=lambda n: -data[ry].get(n, {"rev": 0})["rev"])
+    def rev(y, n):
+        a = data[y].get(n)
+        return a["rev"] if a and a["rev"] else None
+    def cells(get):
+        vals = {y: get(y) for y in years}
+        out = "".join(f"<td class='num r'>{money(vals[y]) if vals[y] else '&ndash;'}</td>"
+                      for y in years)
+        chg = ""
+        for i, y in enumerate(years[1:], start=1):
+            prev = vals[years[i - 1]]
+            cur = vals[y]
+            if prev:
+                chg += f"<td class='num r'>{MR.pct(cur or 0, prev)}</td>"
+            else:
+                chg += "<td class='num r'></td>"
+        return out + chg
+    money = lambda v: nf(v / 1000) + "<span class='k'>k</span>"
+    rows = ""
+    for n in names:
+        rows += ("<tr><td>" + esc(n.replace("Høyer ", "")) + "</td>"
+                 + cells(lambda y, n=n: rev(y, n)) + "</tr>")
+    rows += ("<tr><td>Nedlagte butikker</td>"
+             + cells(lambda y: closed[y]["rev"] or None) + "</tr>")
+    rows += ("<tr class='total'><td>Sum kjeden</td>"
+             + cells(lambda y: (sum(a["rev"] for a in data[y].values())
+                                + closed[y]["rev"]) or None) + "</tr>")
+    yh = "".join(f"<th class='r'>{y}</th>" for y in years)
+    ch = "".join(f"<th class='r'>{y}</th>" for y in years[1:])
+    return f"""<section class="nkl"><div class="shead"><h2>Omsetning per butikk &mdash; {esc(mnd)} siste 10 &aring;r</h2>
+  <p>Brutto omsetning i {esc(mnd)}, {years[0]}&ndash;{ry}, fra varelinjene.
+     Bel&oslash;p merket <i>k</i> er i 1000 kr. Sortert etter {ry}; nedlagte
+     butikker samlet, og Sum kjeden inkluderer dem.</p></div>
+<div class="tw"><table>
+  <thead>
+    <tr><th></th><th class="grp gs" colspan="{len(years)}">Brutto omsetning &middot; 1000 kr</th>
+      <th class="grp gs" colspan="{len(years) - 1}">Endring fra &aring;ret f&oslash;r</th></tr>
+    <tr><th>Butikk</th>{yh}<th class="gs r"></th>{ch}</tr>
+  </thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
+
 def summary_page(series_m, series_y, nkl, mnd, ry, window):
     """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD --
     plus the per-store Noekkeltall table at the bottom."""
@@ -912,6 +1035,9 @@ def main():
             f"&aring;r januar&ndash;{esc(mnd)} {nkl_years[0]}&ndash;{ry}. Sortert "
             f"etter {ry}; siste rad er kjedens snitt.",
             "snitt")
+    asyncio.run(MR.ensure_linjestore(
+        [(y, rm) for y in range(ry - 9, ry + 1)]))
+    sbf += _rolling_sections(ry, rm) + _tiar_section(ry, rm, mnd)
     body = f"""{sbf}
 <section><div class="shead"><h2>Omsetning pr butikk &mdash; {esc(mnd)}</h2>
   <p>H&oslash;yer Webshop er kjedens nettbutikk. Butikkenes egne nettbutikker (Shopify) inng&aring;r i moderbutikkens tall &mdash; se egen tabell under.{closed_note}</p></div>
