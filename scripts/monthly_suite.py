@@ -1331,6 +1331,124 @@ def _top5_brand_sections(ry, rm, mnd):
 
 
 
+BAG_RE = re.compile(r"^h[øo]yer .*pose", re.I)
+
+
+def _ppk_section(ry, rm, mnd):
+    """PPK pr butikk: six sortable lanes -- PPK, antall salg, brutto,
+    antall varer, omsetning pr transaksjon, BF % -- sorted by PPK."""
+    import json as _json
+    f = MR.CACHE / f"klines_{ry:04d}-{rm:02d}.json"
+    if not f.exists():
+        return ""
+    per = {}
+    for r in _json.load(open(f)):
+        st = LR.STOCK_STORE.get(r["STOCKID_FK"])
+        if st is None:
+            continue
+        a = per.setdefault(st, {"sales": set(), "varer": 0.0,
+                                "rev": 0.0, "cost": 0.0})
+        q = float(r["Qty"] or 0)
+        a["rev"] += q * float(r["Price"] or 0)
+        a["cost"] += q * float(r["Cost"] or 0)
+        if BAG_RE.match((r.get("Name") or "").strip()):
+            continue
+        a["sales"].add(r["SALEID"])
+        a["varer"] += q
+    def ppk(a):
+        return a["varer"] / len(a["sales"]) if a["sales"] else None
+    def bfp(a):
+        netto = a["rev"] / 1.25
+        return (netto - a["cost"]) / netto * 100 if netto else None
+    lanes = [
+        ("PPK", ppk, lambda v: f"{v:.2f}".replace(".", ","), None),
+        ("Antall salg", lambda a: len(a["sales"]), lambda v: nf(v), None),
+        ("Brutto omsetning", lambda a: a["rev"],
+         lambda v: f"{v / 1e6:.1f}".replace(".", ",") + "M", None),
+        ("Antall varer", lambda a: a["varer"], lambda v: nf(v), None),
+        ("Oms. pr trans", lambda a: a["rev"] / len(a["sales"]) if a["sales"] else None,
+         lambda v: nf(v), None),
+        ("BF %", bfp, lambda v: f"{v:.0f}%".replace("-", "&minus;"), 45.0),
+    ]
+    names = sorted(per, key=lambda n: -(ppk(per[n]) or 0))
+    maxes = []
+    for _t, get, _l, ax in lanes:
+        vals = [get(per[n]) for n in names]
+        vals = [v for v in vals if v is not None]
+        maxes.append(ax if ax else max(vals) * 1.02)
+    W, L, RH, TOP = 1080, 148, 21, 46
+    GW = (W - L - 6) / len(lanes)
+    GG, LAB = 20, 40
+    LW = GW - GG - LAB
+    n_rows = len(names)
+    H = TOP + n_rows * RH + 26
+    out = [f'<svg class="sbf" viewBox="0 0 {W} {H}" role="img" '
+           f'aria-label="PPK pr butikk, {esc(mnd)} {ry}">', '<g class="axis">']
+    for gi, (t, _g, _l, _a) in enumerate(lanes):
+        gx = L + gi * GW
+        out.append(f'<text x="{gx + LW / 2:.1f}" y="{TOP - 12}" '
+                   f'text-anchor="middle" class="chead" data-ci="{gi}" '
+                   f'tabindex="0">{t}</text>')
+    out.append('</g>')
+    for i, n in enumerate(names):
+        a = per[n]
+        yy = TOP + i * RH
+        vals = [g(a) for _t, g, _l, _x in lanes]
+        flat = "|".join("" if v is None else f"{v:.4f}" for v in vals)
+        out.append(f'<g class="srow" data-vals="{flat}" '
+                   f'transform="translate(0,{yy:.1f})">')
+        out.append(f'<line class="rl" x1="{L - 6}" x2="{W - 8}" '
+                   f'y1="{RH:.1f}" y2="{RH:.1f}"/>')
+        out.append(f'<text class="sl" x="{L - 10}" y="{RH - 6:.1f}" '
+                   f'text-anchor="end">{esc(n.replace("Høyer ", ""))}</text>')
+        for gi, ((t, g, lab, _x), v) in enumerate(zip(lanes, vals)):
+            gx = L + gi * GW
+            if v is None:
+                out.append(f'<text class="na" x="{gx + 4}" y="{RH - 6:.1f}">&ndash;</text>')
+                continue
+            w = LW * v / maxes[gi] if v > 0 else 0
+            out.append(f'<g class="pt" tabindex="0" role="img" '
+                       f'aria-label="{esc(n)} {esc(mnd)} {ry}: {t} {lab(v)}">'
+                       f'<rect x="{gx:.1f}" y="4" width="{max(w, 1):.1f}" '
+                       f'height="{RH - 8}" fill="var(--slate)"/>'
+                       f'<text class="vl" x="{gx + max(w, 1) + 4:.1f}" '
+                       f'y="{RH - 6:.1f}">{lab(v)}</text></g>')
+        out.append('</g>')
+    out.append("</svg>")
+    return f"""<section><div class="shead"><h2>PPK pr butikk &mdash; {esc(mnd)}</h2>
+  <p>Plagg pr kunde = netto antall varer (b&aelig;reposer tatt ut) delt
+     p&aring; antall kvitteringer, {esc(mnd)} {ry}, alle kj&oslash;nn.
+     Sortert etter PPK. PPT-utgaven teller nettordre og rene returer noe
+     annerledes; avvik under &plusmn;0,03 i PPK.</p></div>
+<div class="plot">{"".join(out)}</div></section>"""
+
+
+def inject_ppk(ry, rm, mnd, outdir):
+    """PPK chart as the FIRST section of report 07."""
+    f = pathlib.Path(outdir) / "07_Selgere.html"
+    if not f.exists():
+        return
+    html = f.read_text(encoding="ascii")
+    block = _ppk_section(ry, rm, mnd)
+    if not block:
+        return
+    start = "<!-- PPK START -->"
+    end = "<!-- PPK END -->"
+    payload = start + block + end
+    if start in html:
+        import re as _re
+        html = _re.sub(_re.escape(start) + ".*?" + _re.escape(end),
+                       lambda _m: payload, html, flags=_re.S)
+    else:
+        pos = html.find("<section")
+        assert pos > 0
+        html = html[:pos] + payload + html[pos:]
+    if not html.isascii():
+        raise SystemExit("07 injection not pure ASCII")
+    f.write_text(html, encoding="ascii")
+    print(f"  injiserte PPK i {f}", file=sys.stderr)
+
+
 def inject_merker(ry, rm, mnd, outdir):
     """Place the YTD brand table right below the month brand table in 06."""
     f = pathlib.Path(outdir) / "06_Merker.html"
@@ -1744,6 +1862,7 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
         [(y, m) for y in (ry - 2, ry - 1, ry) for m in range(1, rm + 1)]))
     inject_sesong(ry, rm, mnd, outdir)
     inject_merker(ry, rm, mnd, outdir)
+    inject_ppk(ry, rm, mnd, outdir)
     closed_ytd = {y: linjestore_closed(y, range(1, rm + 1)) for y in nkl_years}
     inject_rabatter(ry, rm, mnd, outdir, nkl_years,
                     per_m and {n: a for n, a in
