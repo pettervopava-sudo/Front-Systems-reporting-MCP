@@ -1129,7 +1129,8 @@ def _merker_ytd_section(ry, rm, mnd):
                 d[y][1] += q * float(r["Cost"] or 0)
     def vis(b, y):
         return agg[b][y][0] >= MERKE_MIN_YTD
-    names = [b for b in agg if any(vis(b, y) for y in years)]
+    names = [b for b in agg
+             if any(vis(b, y) for y in years) and agg[b][ry][0] > 0]
     names.sort(key=lambda b: -(agg[b][ry][0] if vis(b, ry) else 0))
     y0, y1, y2 = years
     def cells(b):
@@ -1170,9 +1171,9 @@ def _merker_ytd_section(ry, rm, mnd):
     return f"""<section class="nkl"><div class="shead"><h2>Merker med h&oslash;yest omsetning &mdash; YTD</h2>
   <p>Januar&ndash;{esc(mnd)}, {y0}&ndash;{ry}. Terskel {nf(MERKE_MIN_YTD)} kr
      pr &aring;r &mdash; celler under terskelen vises ikke (PPT-utgavens
-     konvensjon); sortert etter {ry}. Nedlagte butikker inng&aring;r i
-     merketallene, som i PPT-utgaven. Sum-raden summerer de viste
-     cellene.</p></div>
+     konvensjon); kun merker med omsetning i {ry}, sortert etter {ry}.
+     Nedlagte butikker inng&aring;r i merketallene, som i PPT-utgaven.
+     Sum-raden summerer de viste cellene.</p></div>
 <div class="tw"><table>
   <thead>
     <tr><th></th><th class="grp gs" colspan="3">Brutto omsetning</th>
@@ -1187,13 +1188,134 @@ def _merker_ytd_section(ry, rm, mnd):
   <tbody>{rows}{trow}</tbody></table></div></section>"""
 
 
+BRAND_DOMAINS = {
+    "Polo Ralph Lauren": "ralphlauren.com", "Sand": "sandcopenhagen.com",
+    "Samsøe Samsøe": "samsoe.com", "By Malene Birger": "bymalenebirger.com",
+    "NN.07": "nn07.com", "Holzweiler": "holzweiler.com",
+    "Diemme": "diemmefootwear.com", "Moncler": "moncler.com",
+    "Lois Jeans": "loisjeans.com", "Urban Pioneers": "urbanpioneers.no",
+    "Stenstr\u00f8ms": "stenstroms.com", "Replay": "replayjeans.com",
+    "Cala Jade": "calajade.com", "Frislid": "frislid.com",
+    "Oscar Jacobson": "oscarjacobson.com", "Tiger of Sweden": "tigerofsweden.com",
+}
+
+
+def _brand_logo_uri(brand):
+    """Cached brand logo as a data URI; fetched once from clearbit's logo
+    API when a domain is known. Empty string on any failure -- the report
+    builds fine without logos."""
+    import base64, re as _re
+    dom = BRAND_DOMAINS.get(brand)
+    if not dom:
+        return ""
+    d = pathlib.Path(__file__).parent / "assets" / "brandlogos"
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / (_re.sub(r"[^a-z0-9]+", "_", brand.lower()) + ".img")
+    if not f.exists():
+        # curl: python-ssl feiler under maskinens TLS-intercepterende proxy.
+        # Googles favicon-tjeneste; clearbit er nedlagt.
+        import subprocess
+        r = subprocess.run(
+            ["curl", "-sfL", "--max-time", "8", "-o", str(f),
+             f"https://www.google.com/s2/favicons?domain={dom}&sz=64"],
+            capture_output=True)
+        if r.returncode != 0 or not f.exists() or f.stat().st_size < 200:
+            f.unlink(missing_ok=True)
+            return ""
+    data = f.read_bytes()
+    if data.startswith(b"\x89PNG"):
+        mime = "image/png"
+    elif data.startswith(b"\xff\xd8"):
+        mime = "image/jpeg"
+    else:
+        return ""
+    return f"data:{mime};base64," + base64.b64encode(data).decode()
+
+
+def _brand_store_table(brand, agg_rows, title, sub, logo):
+    order = sorted(agg_rows.items(), key=lambda kv: -kv[1][0])
+    if not order:
+        return ""
+    mx = order[0][1][0] or 1
+    tot = [sum(v[0] for _n, v in order), sum(v[1] for _n, v in order),
+           sum(v[2] for _n, v in order)]
+    rows = ""
+    for n, (rev, cost, qty) in order:
+        netto = rev / 1.25
+        rows += (f"<tr><td>{esc(n.replace('Høyer ', ''))}</td>"
+                 f"<td><div class='track'><div class='fill alt' "
+                 f"style='width:{rev / mx * 100:.1f}%'></div></div></td>"
+                 f"<td class='num r'>{nf(rev)}</td>"
+                 f"<td class='num r'>{nf(netto - cost)}</td>"
+                 f"<td class='num r'>{p1((netto - cost) / netto * 100) if netto else '&ndash;'}</td>"
+                 f"<td class='num r'>{nf(qty)}</td></tr>")
+    netto_t = tot[0] / 1.25
+    rows += (f"<tr class='total'><td>Sum</td><td></td>"
+             f"<td class='num r'>{nf(tot[0])}</td>"
+             f"<td class='num r'>{nf(netto_t - tot[1])}</td>"
+             f"<td class='num r'>{p1((netto_t - tot[1]) / netto_t * 100)}</td>"
+             f"<td class='num r'>{nf(tot[2])}</td></tr>")
+    img = (f'<img class="blogo" src="{logo}" alt="">' if logo else "")
+    return f"""<section><div class="shead"><h2>{img}{title}</h2><p>{sub}</p></div>
+<div class="tw"><table>
+  <thead><tr><th>Butikk</th><th style="width:13%">Andel</th>
+    <th class="r">Omsetning</th><th class="r">BF kr</th><th class="r">BF %</th>
+    <th class="r">Plagg</th></tr></thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
+
+def _top5_brand_sections(ry, rm, mnd):
+    """Month + YTD per-store tables for the month's top five brands, with
+    brand logos where available."""
+    import json as _json
+    def collect(months):
+        per = {}
+        for m in months:
+            f = MR.CACHE / f"klines_{ry:04d}-{m:02d}.json"
+            if not f.exists():
+                return None
+            for r in _json.load(open(f)):
+                store = LR.STOCK_STORE.get(r["STOCKID_FK"])
+                if store is None:
+                    continue
+                b = (r.get("Brand") or "").strip()
+                if not b:
+                    continue
+                q = float(r["Qty"] or 0)
+                d = per.setdefault(b, {})
+                a = d.setdefault(store, [0.0, 0.0, 0.0])
+                a[0] += q * float(r["Price"] or 0)
+                a[1] += q * float(r["Cost"] or 0)
+                a[2] += q
+        return per
+    month = collect([rm])
+    ytd = collect(range(1, rm + 1))
+    if month is None or ytd is None:
+        return ""
+    top5 = sorted(month, key=lambda b: -sum(v[0] for v in month[b].values()))[:5]
+    out = ('<style>.blogo{height:26px;vertical-align:middle;margin-right:10px;'
+           'background:#fff;border-radius:3px;padding:2px 5px;'
+           'box-sizing:content-box;}</style>')
+    for i, b in enumerate(top5, start=1):
+        logo = _brand_logo_uri(b)
+        rev_m = sum(v[0] for v in month[b].values())
+        rev_y = sum(v[0] for v in ytd.get(b, {}).values())
+        out += _brand_store_table(
+            b, month[b], f"{esc(b)} pr butikk &mdash; {esc(mnd)}",
+            f"Nr. {i} i {esc(mnd)} {ry} med {nf(rev_m)} kr.", logo)
+        out += _brand_store_table(
+            b, ytd.get(b, {}), f"{esc(b)} pr butikk &mdash; YTD",
+            f"Januar&ndash;{esc(mnd)} {ry}: {nf(rev_y)} kr.", logo)
+    return out
+
+
 def inject_merker(ry, rm, mnd, outdir):
     """Place the YTD brand table right below the month brand table in 06."""
     f = pathlib.Path(outdir) / "06_Merker.html"
     if not f.exists():
         return
     html = f.read_text(encoding="ascii")
-    block = _merker_ytd_section(ry, rm, mnd)
+    block = _merker_ytd_section(ry, rm, mnd) + _top5_brand_sections(ry, rm, mnd)
     if not block:
         return
     start = "<!-- MERKER-YTD START -->"

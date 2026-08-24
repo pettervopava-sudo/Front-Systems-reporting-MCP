@@ -73,7 +73,6 @@ STOCK_STORE = {
 }
 EXCLUDED_STOCKS = {1333, 1901, 2957, 5442}  # BMB + Outlet Nydalen + Teststore
 SYSTEM_SELLERS = {"webshop", "shopify integrasjon", "shopify", "integrasjon"}
-SPECIFIC_BRANDS = ["Polo Ralph Lauren", "By Malene Birger", "NN.07"]
 SELLER_MIN_TRANS = 40  # default for short windows; use --seller-min 100 for full months
 
 MND = ["januar", "februar", "mars", "april", "mai", "juni", "juli",
@@ -641,32 +640,7 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
         f"<td class='num r'>{nf(a['qty'])}</td>"
         f"<td class='num r'>{esc(p1(a['rab']/a['full']*100 if a['full'] else 0))}</td></tr>"
         for b, a in per_brand)
-    spec = ""
-    for brand in SPECIFIC_BRANDS:
-        blines = [l for l in lines if l.brand == brand]
-        if not blines:
-            spec += (f"<section><div class='shead'><h2>{esc(brand)}</h2></div>"
-                     f"<p class='note'>Ingen salg i perioden.</p></section>")
-            continue
-        pb = sorted(agg(blines, lambda l: l.store).items(),
-                    key=lambda kv: -kv[1]["rev"])
-        mx = pb[0][1]["rev"]
-        btot = agg(blines, lambda l: "x")["x"]
-        brows = "".join(
-            f"<tr><td>{esc(n)}</td>"
-            f"<td><div class='track'><div class='fill alt' "
-            f"style='width:{a['rev']/mx*100:.1f}%'></div></div></td>"
-            f"<td class='num r'>{nf(a['rev'])}</td><td class='num r'>{nf(a['bf'])}</td>"
-            f"<td class='num r'>{esc(p1(bfp(a)))}</td>"
-            f"<td class='num r'>{nf(a['qty'])}</td></tr>"
-            for n, a in pb)
-        spec += f"""<section><div class="shead"><h2>{esc(brand)} pr butikk</h2>
-  <p>{nf(btot['rev'])} kr &middot; BF {esc(p1(bfp(btot)))} &middot; {nf(btot['qty'])} plagg</p></div>
-<div class="tw"><table>
-  <thead><tr><th>Butikk</th><th style="width:13%">Andel</th>
-    <th class="r">Omsetning</th><th class="r">BF kr</th><th class="r">BF %</th>
-    <th class="r">Plagg</th></tr></thead>
-  <tbody>{brows}</tbody></table></div></section>"""
+    spec = ""  # merke-pr-butikk bygges av monthly_suite (topp 5, mnd+YTD)
     mtit = (f"Merker med h&oslash;yest omsetning &mdash; {CUR_MND}"
             if CUR_MND else "Merker med h&oslash;yest omsetning")
     body = f"""<section><div class="shead"><h2>{mtit}</h2>
