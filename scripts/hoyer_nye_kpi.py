@@ -460,6 +460,7 @@ def main():
                    build_k1(month_lines, start_agg, end_agg, mnd, ry))
             + part("k2", "K2", "Returer og returgrad", win,
                    build_k2(month_lines, hist_lines, mnd, ry))
+            + f"<script>{LR.SORT_JS}</script>"
             + """<script>{
 const parts=[...document.querySelectorAll('.part')];
 const ids=new Set(parts.map(p=>p.id));

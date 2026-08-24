@@ -427,6 +427,8 @@ def main():
     )
     if not page.isascii():
         raise SystemExit("output not pure ASCII — would mojibake on a non-UTF-8 surface")
+    import line_reports
+    page += "<script>" + line_reports.SORT_JS + "</script>"
     out.write_text(page, encoding="ascii")
     print(f"  {MND[rm-1]} {ry}: brutto {this_m.revenue:,.0f} "
           f"({pct(this_m.revenue, prev_y.revenue)}) trans {this_m.trans:,} "
@@ -435,8 +437,9 @@ def main():
 
 
 def _logo_css_for_template() -> str:
+    # bare CSS: the placeholder sits INSIDE the template's <style> block
     import line_reports
-    return "<style>" + line_reports.LOGO_CSS + "</style>" if line_reports.LOGO_CSS else ""
+    return line_reports.LOGO_CSS + line_reports.SORT_CSS
 
 
 def render(**k):

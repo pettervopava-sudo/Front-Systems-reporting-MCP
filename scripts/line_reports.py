@@ -224,8 +224,81 @@ def _logo_css() -> str:
     )
 
 
+
+SORT_CSS = """
+th[data-srt]{cursor:pointer;user-select:none;}
+th[data-srt]:hover,th[data-srt]:focus-visible{color:var(--ox);outline:none;}
+th.s-asc:after{content:" \\2191";color:var(--ox);}
+th.s-desc:after{content:" \\2193";color:var(--ox);}
+"""
+
+#: Klikk paa kolonneoverskrift sorterer tabellen (norsk tallformat, k/M/%-
+#: suffiks, minustegn og datoer forstaas; strek sorterer sist; rader med
+#: class 'total' ligger fast nederst). Tabeller med rowspan (matriser)
+#: hoppes over -- radene der er grupper, ikke enkeltlinjer.
+SORT_JS = """
+(function(){
+function parseVal(t){
+  t=(t||"").replace(/\\u00a0/g," ").trim();
+  if(!t||t==="\\u2013"||t==="-"||t==="\\u2014")return{n:null,t:""};
+  if(/^\\d{4}-\\d{2}/.test(t))return{n:null,t:t};
+  var x=t.replace(/\\u2212/g,"-").replace(/[%kM]/g,"").replace(/ /g,"")
+         .replace(/,/g,".").replace(/\\.(?=.*\\.)/g,"");
+  var n=parseFloat(x);
+  if(isFinite(n)&&/[0-9]/.test(x))return{n:n,t:t.toLowerCase()};
+  return{n:null,t:t.toLowerCase()};
+}
+function sortTable(tb,th,ci){
+  var body=tb.tBodies[0];if(!body)return;
+  var rows=[].slice.call(body.rows);
+  var pin=rows.filter(function(r){return r.className.indexOf("total")>=0;});
+  var sortable=rows.filter(function(r){return r.className.indexOf("total")<0;});
+  var dir=th.classList.contains("s-asc")?-1:1;
+  var hdr=th.parentNode.cells;
+  for(var i=0;i<hdr.length;i++){hdr[i].classList.remove("s-asc","s-desc");
+    hdr[i].removeAttribute("aria-sort");}
+  th.classList.add(dir===1?"s-asc":"s-desc");
+  th.setAttribute("aria-sort",dir===1?"ascending":"descending");
+  var vals=sortable.map(function(r,i){
+    var c=r.cells[ci];return{i:i,r:r,v:parseVal(c?c.textContent:"")};});
+  var nums=vals.filter(function(x){return x.v.n!==null;}).length;
+  var numeric=nums>=vals.length/2&&nums>0;
+  vals.sort(function(a,b){
+    var x=a.v,y=b.v;
+    if(numeric){
+      if(x.n===null&&y.n===null)return a.i-b.i;
+      if(x.n===null)return 1;
+      if(y.n===null)return -1;
+      return dir*(x.n-y.n)||a.i-b.i;
+    }
+    if(!x.t&&!y.t)return a.i-b.i;
+    if(!x.t)return 1;
+    if(!y.t)return -1;
+    return dir*x.t.localeCompare(y.t,"no")||a.i-b.i;
+  });
+  vals.forEach(function(x){body.appendChild(x.r);});
+  pin.forEach(function(r){body.appendChild(r);});
+}
+[].slice.call(document.querySelectorAll("table")).forEach(function(tb){
+  if(tb.querySelector("[rowspan]"))return;
+  if(!tb.tHead||!tb.tHead.rows.length)return;
+  var leaf=tb.tHead.rows[tb.tHead.rows.length-1];
+  [].slice.call(leaf.cells).forEach(function(th,ci){
+    if(th.dataset.srt)return;
+    th.dataset.srt="1";
+    th.setAttribute("tabindex","0");
+    th.setAttribute("title","Sorter");
+    th.addEventListener("click",function(){sortTable(tb,th,ci);});
+    th.addEventListener("keydown",function(ev){
+      if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();sortTable(tb,th,ci);}
+    });
+  });
+});
+})();
+"""
+
 LOGO_CSS = _logo_css()
-CSS = CSS + LOGO_CSS
+CSS = CSS + LOGO_CSS + SORT_CSS
 
 TIP_JS = """
 const tip=document.getElementById("tip");
@@ -286,6 +359,7 @@ def page(current, no, title, window_note, body, foot_extra="") -> str:
   <div>Rapportserie H&Oslash;YER-kjeden &middot; <code>scripts/line_reports.py</code></div>
 </footer>
 </div>
+<script>{SORT_JS}</script>
 <div id="tip" role="status" aria-live="polite"></div>
 """
 
