@@ -386,10 +386,12 @@ def _store_bf_chart(per_year, years, mnd, title, sub, closed=None):
         gx = L + gi * GW
         s.append(f'<text x="{gx + GW / 2 - 12:.1f}" y="16" text-anchor="middle" '
                  f'class="yh">{y}</text>')
-        s.append(f'<text x="{gx + BW / 2:.1f}" y="{TOP - 12}" text-anchor="middle">'
+        s.append(f'<text x="{gx + BW / 2:.1f}" y="{TOP - 12}" text-anchor="middle" '
+                 f'class="chead" data-ci="{gi * 2}" tabindex="0">'
                  f'Brutto omsetning</text>')
         s.append(f'<text x="{gx + BW + LG + BW / 2:.1f}" y="{TOP - 12}" '
-                 f'text-anchor="middle">BF %</text>')
+                 f'text-anchor="middle" class="chead" data-ci="{gi * 2 + 1}" '
+                 f'tabindex="0">BF %</text>')
         # axis ticks at bottom
         by = TOP + n_rows * RH + 14
         step = 5 if rev_max <= 15e6 else 10 if rev_max <= 30e6 else 20
@@ -406,16 +408,22 @@ def _store_bf_chart(per_year, years, mnd, title, sub, closed=None):
         if bf_hi <= bf_lo:
             return 1.0
         return 0.28 + 0.72 * (b - bf_lo) / (bf_hi - bf_lo)
-    def row(i, label, cells, gray=False):
+    def row(i, label, cells, gray=False, pin=False):
         yy = TOP + i * RH
-        s.append(f'<line class="rl" x1="{L - 6}" x2="{W - 8}" y1="{yy + RH:.1f}" '
-                 f'y2="{yy + RH:.1f}"/>')
+        flat = []
+        for rv_, bf_, _a in cells:
+            flat.append("" if rv_ is None else f"{rv_:.2f}")
+            flat.append("" if bf_ is None else f"{bf_:.4f}")
+        s.append(f'<g class="srow{" pin" if (gray or pin) else ""}" '
+                 f'data-vals="{"|".join(flat)}" transform="translate(0,{yy:.1f})">')
+        s.append(f'<line class="rl" x1="{L - 6}" x2="{W - 8}" y1="{RH:.1f}" '
+                 f'y2="{RH:.1f}"/>')
         s.append(f'<text class="sl{" tot" if gray else ""}" x="{L - 10}" '
-                 f'y="{yy + RH - 6:.1f}" text-anchor="end">{label}</text>')
+                 f'y="{RH - 6:.1f}" text-anchor="end">{label}</text>')
         for gi, (rv, bf, aria) in enumerate(cells):
             gx = L + gi * GW
             if rv is None:
-                s.append(f'<text class="na" x="{gx + 4}" y="{yy + RH - 6:.1f}">&ndash;</text>')
+                s.append(f'<text class="na" x="{gx + 4}" y="{RH - 6:.1f}">&ndash;</text>')
                 continue
             w1 = LW * rv / rev_max
             w2 = LW * bf / bf_axis if bf > 0 else 0
@@ -426,15 +434,16 @@ def _store_bf_chart(per_year, years, mnd, title, sub, closed=None):
             p_lab = f"{bf:.1f}".replace(".", ",").replace("-", "&minus;") + "%"
             neg = " neg" if bf < 0 else ""
             s.append(f'<g class="pt" tabindex="0" role="img" aria-label="{aria}">'
-                     f'<rect x="{gx:.1f}" y="{yy + 4:.1f}" width="{max(w1, 1):.1f}" '
+                     f'<rect x="{gx:.1f}" y="4" width="{max(w1, 1):.1f}" '
                      f'height="{RH - 8}" fill="{fill1}"/>'
                      f'<text class="vl" x="{gx + max(w1, 1) + 4:.1f}" '
-                     f'y="{yy + RH - 6:.1f}">{m_lab}</text>'
-                     f'<rect x="{gx + BW + LG:.1f}" y="{yy + 4:.1f}" '
+                     f'y="{RH - 6:.1f}">{m_lab}</text>'
+                     f'<rect x="{gx + BW + LG:.1f}" y="4" '
                      f'width="{max(w2, 1):.1f}" height="{RH - 8}" fill="{fill2}" '
                      f'fill-opacity="{o2:.2f}"/>'
                      f'<text class="vl{neg}" x="{gx + BW + LG + max(w2, 1) + 4:.1f}" '
-                     f'y="{yy + RH - 6:.1f}">{p_lab}</text></g>')
+                     f'y="{RH - 6:.1f}">{p_lab}</text></g>')
+        s.append('</g>')
     for i, n in enumerate(names):
         cells = []
         for y in years:
@@ -454,7 +463,7 @@ def _store_bf_chart(per_year, years, mnd, title, sub, closed=None):
             cells.append((None, None, "") if v is None else
                          (v[0], v[1], f"Nedlagte butikker {esc(mnd)} {y}: brutto "
                                       f"{nf(v[0])} kr, BF {v[1]:.1f}%".replace(".", ",")))
-        row(r, "Nedlagte butikker", cells)
+        row(r, "Nedlagte butikker", cells, pin=True)
         r += 1
     cells = []
     for y in years:
@@ -562,7 +571,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
     for gi, y in enumerate(years):
         gx = L + gi * GW
         s.append(f'<text x="{gx + LW / 2:.1f}" y="16" text-anchor="middle" class="yh">{y}</text>')
-        s.append(f'<text x="{gx + LW / 2:.1f}" y="{TOP - 12}" text-anchor="middle">{head}</text>')
+        s.append(f'<text x="{gx + LW / 2:.1f}" y="{TOP - 12}" text-anchor="middle" '
+                 f'class="chead" data-ci="{gi}" tabindex="0">{head}</text>')
         t = 0
         while t <= axis:
             tx = gx + LW * t / axis
@@ -570,24 +580,28 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
                      f'text-anchor="{"start" if t == 0 else "middle"}">{unit(int(t))}</text>')
             t += step
     s.append('</g>')
-    def row(i, label, cells, bold=False):
+    def row(i, label, cells, bold=False, pin=False):
         yy = TOP + i * RH
-        s.append(f'<line class="rl" x1="{L - 6}" x2="{W - 8}" y1="{yy + RH:.1f}" y2="{yy + RH:.1f}"/>')
+        flat = ["" if v_ is None else f"{v_:.4f}" for _y, v_, _a in cells]
+        s.append(f'<g class="srow{" pin" if (bold or pin) else ""}" '
+                 f'data-vals="{"|".join(flat)}" transform="translate(0,{yy:.1f})">')
+        s.append(f'<line class="rl" x1="{L - 6}" x2="{W - 8}" y1="{RH:.1f}" y2="{RH:.1f}"/>')
         s.append(f'<text class="sl{" tot" if bold else ""}" x="{L - 10}" '
-                 f'y="{yy + RH - 6:.1f}" text-anchor="end">{label}</text>')
+                 f'y="{RH - 6:.1f}" text-anchor="end">{label}</text>')
         for gi, (y, v, aria) in enumerate(cells):
             gx = L + gi * GW
             if v is None:
-                s.append(f'<text class="na" x="{gx + 4}" y="{yy + RH - 6:.1f}">&ndash;</text>')
+                s.append(f'<text class="na" x="{gx + 4}" y="{RH - 6:.1f}">&ndash;</text>')
                 continue
             w = LW * v / axis if v > 0 else 0
             fill, op = ("var(--ink2)", 1.0) if bold else _year_fill(gi, n_y)
             neg = " neg" if v < 0 else ""
             s.append(f'<g class="pt" tabindex="0" role="img" aria-label="{aria}">'
-                     f'<rect x="{gx:.1f}" y="{yy + 4:.1f}" width="{max(w, 1):.1f}" '
+                     f'<rect x="{gx:.1f}" y="4" width="{max(w, 1):.1f}" '
                      f'height="{RH - 8}" fill="{fill}" fill-opacity="{op}"/>'
                      f'<text class="vl{neg}" x="{gx + max(w, 1) + 4:.1f}" '
-                     f'y="{yy + RH - 6:.1f}">{lab(v)}</text></g>')
+                     f'y="{RH - 6:.1f}">{lab(v)}</text></g>')
+        s.append('</g>')
     def aria(label, y, v):
         if v is None:
             return ""
@@ -598,7 +612,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
             [(y, vals.get((y, n)), aria(esc(n), y, vals.get((y, n)))) for y in years])
     for j, (label, cv, bold) in enumerate(extra):
         row(len(names) + j, label,
-            [(y, cv.get(y), aria(label, y, cv.get(y))) for y in years], bold=bold)
+            [(y, cv.get(y), aria(label, y, cv.get(y))) for y in years],
+            bold=bold, pin=True)
     s.append("</svg>")
     legend = "".join(
         f'<span><i class="sw" style="background:{_year_fill(i, n_y)[0]};'

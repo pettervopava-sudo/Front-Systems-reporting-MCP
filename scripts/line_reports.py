@@ -230,6 +230,9 @@ th[data-srt]{cursor:pointer;user-select:none;}
 th[data-srt]:hover,th[data-srt]:focus-visible{color:var(--ox);outline:none;}
 th.s-asc:after{content:" \\2191";color:var(--ox);}
 th.s-desc:after{content:" \\2193";color:var(--ox);}
+text.chead{cursor:pointer;}
+text.chead:hover{fill:var(--ox);}
+text.chead.s-on{fill:var(--ox);font-weight:700;}
 """
 
 #: Klikk paa kolonneoverskrift sorterer tabellen (norsk tallformat, k/M/%-
@@ -291,6 +294,48 @@ function sortTable(tb,th,ci){
     th.addEventListener("click",function(){sortTable(tb,th,ci);});
     th.addEventListener("keydown",function(ev){
       if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();sortTable(tb,th,ci);}
+    });
+  });
+});
+})();
+"""
+
+
+#: Klikk paa kolonnetitlene i butikkgrafene (Brutto omsetning / BF % /
+#: BF i kroner under hvert aar) omsorterer radgruppene (g.srow) vertikalt;
+#: rader med class 'pin' (Nedlagte / Snitt / Kjeden) ligger fast nederst.
+CHART_SORT_JS = """
+(function(){
+[].slice.call(document.querySelectorAll("svg")).forEach(function(svg){
+  var rows=[].slice.call(svg.querySelectorAll("g.srow"));
+  if(!rows.length||svg.dataset.cs)return;
+  svg.dataset.cs="1";
+  var ys=rows.map(function(g){
+    return parseFloat(/translate\\(0,([0-9.]+)\\)/.exec(g.getAttribute("transform"))[1]);
+  }).sort(function(a,b){return a-b;});
+  function val(g,ci){
+    var v=(g.getAttribute("data-vals")||"").split("|")[ci];
+    return v===""||v===undefined?null:parseFloat(v);
+  }
+  var heads=[].slice.call(svg.querySelectorAll("text.chead"));
+  heads.forEach(function(h){
+    h.addEventListener("click",function(){
+      var ci=+h.getAttribute("data-ci");
+      var desc=h.getAttribute("data-dir")!=="desc";
+      heads.forEach(function(x){x.removeAttribute("data-dir");
+        x.classList.remove("s-on");});
+      h.setAttribute("data-dir",desc?"desc":"asc");h.classList.add("s-on");
+      var mov=rows.filter(function(g){return !g.classList.contains("pin");});
+      var pin=rows.filter(function(g){return g.classList.contains("pin");});
+      mov.sort(function(a,b){
+        var x=val(a,ci),y=val(b,ci);
+        if(x===null&&y===null)return 0;
+        if(x===null)return 1;
+        if(y===null)return -1;
+        return desc?y-x:x-y;
+      });
+      mov.concat(pin).forEach(function(g,i){
+        g.setAttribute("transform","translate(0,"+ys[i]+")");});
     });
   });
 });
@@ -360,6 +405,7 @@ def page(current, no, title, window_note, body, foot_extra="") -> str:
 </footer>
 </div>
 <script>{SORT_JS}</script>
+<script>{CHART_SORT_JS}</script>
 <div id="tip" role="status" aria-live="polite"></div>
 """
 
