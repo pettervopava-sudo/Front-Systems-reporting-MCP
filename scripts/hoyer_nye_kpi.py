@@ -246,15 +246,6 @@ def build_k1(lines, start_agg, end_agg, mnd, ry):
 
 
 # ---------------------------------------------------------------- K2 ----
-def hovedbutikk(cnt):
-    """Dominant butikk + '+N' naar det finnes flere."""
-    if not cnt:
-        return "&ndash;"
-    top = max(cnt, key=cnt.get)
-    extra = len(cnt) - 1
-    return esc(top) + (f" <span class='k'>+{extra}</span>" if extra else "")
-
-
 def build_k2(month_lines, hist_lines, mnd, ry):
     ret = [l for l in month_lines if l.qty < 0]
     pos_sid_dates = collections.defaultdict(set)
@@ -277,23 +268,21 @@ def build_k2(month_lines, hist_lines, mnd, ry):
         return sellers.pop() if len(sellers) == 1 else "(flertydig)"
 
     # -- del 1: pr utfoerende ------------------------------------------------
-    per_emp = collections.defaultdict(
-        lambda: {"n": 0, "v": 0.0, "bytte": 0,
-                 "stores": collections.Counter()})
+    per_emp = collections.defaultdict(lambda: {"n": 0, "v": 0.0, "bytte": 0})
     for l in ret:
-        a = per_emp[l.emp or "(tom)"]
+        a = per_emp[(l.emp or "(tom)",
+                     (l.store or "?").replace("Høyer ", ""))]
         a["n"] += 1
         a["v"] += -l.rev
-        a["stores"][(l.store or "?").replace("Høyer ", "")] += -l.rev
         if l.date in pos_sid_dates.get(l.sid, set()):
             a["bytte"] += 1
     tot_n = sum(a["n"] for a in per_emp.values())
     tot_v = sum(a["v"] for a in per_emp.values())
-    felles_n = sum(a["n"] for e, a in per_emp.items() if is_felles(e))
+    felles_n = sum(a["n"] for (e, _st), a in per_emp.items() if is_felles(e))
     rows = ""
-    for e, a in sorted(per_emp.items(), key=lambda kv: -kv[1]["v"])[:25]:
+    for (e, st), a in sorted(per_emp.items(), key=lambda kv: -kv[1]["v"])[:30]:
         rows += (f"<tr><td>{esc(e)}</td>"
-                 f"<td>{hovedbutikk(a['stores'])}</td>"
+                 f"<td>{esc(st)}</td>"
                  f"<td>{'Felles/system' if is_felles(e) else 'Personlig'}</td>"
                  f"<td class='num r'>{nf(a['n'])}</td>"
                  f"<td class='num r'>{money(a['v'])}</td>"
@@ -310,7 +299,7 @@ def build_k2(month_lines, hist_lines, mnd, ry):
     <span class="f">etterlevelses-KPI: b&oslash;r mot 0 for personlig sporbarhet</span></div>
 </div>
 <section><div class="shead"><h2>Returer pr utf&oslash;rende bruker</h2>
-  <p>{esc(mnd)} {ry}, topp 25 etter returverdi. Bel&oslash;p merket <i>k</i> er i 1000 kr.</p></div>
+  <p>{esc(mnd)} {ry}, &eacute;n rad pr bruker og butikk, topp 30 etter returverdi. Bel&oslash;p merket <i>k</i> er i 1000 kr.</p></div>
 <div class="tw"><table>
   <thead><tr><th>Bruker</th><th>Butikk</th><th>Type</th><th class="r">Antall</th>
     <th class="r">Returverdi</th><th class="r">Snitt kr</th>
@@ -328,29 +317,30 @@ def build_k2(month_lines, hist_lines, mnd, ry):
             ambiguous += 1
         else:
             matched += 1
-            a = attributed[o]
+            a = attributed[(o, (l.store or "?").replace("Høyer ", ""))]
             a["n"] += 1
             a["v"] += -l.rev
     sold = collections.defaultdict(float)
-    sold_store = collections.defaultdict(collections.Counter)
     for l in month_lines:
         if l.qty > 0:
-            sold[l.emp] += l.rev
-            sold_store[l.emp][(l.store or "?").replace("Høyer ", "")] += l.rev
+            sold[(l.emp, (l.store or "?").replace("Høyer ", ""))] += l.rev
     rows = ""
-    sellers = [e for e, v in sold.items() if v >= 100000 and not is_felles(e)]
-    for e in sorted(sellers, key=lambda e: -(attributed[e]["v"] / sold[e])):
-        a = attributed[e]
+    sellers = [k for k, v in sold.items()
+               if v >= 100000 and not is_felles(k[0])]
+    for k in sorted(sellers, key=lambda k: -(attributed[k]["v"] / sold[k])):
+        e, st = k
+        a = attributed[k]
         rows += (f"<tr><td>{esc(e)}</td>"
-                 f"<td>{hovedbutikk(sold_store[e])}</td>"
-                 f"<td class='num r'>{money(sold[e])}</td>"
+                 f"<td>{esc(st)}</td>"
+                 f"<td class='num r'>{money(sold[k])}</td>"
                  f"<td class='num r'>{nf(a['n'])}</td>"
                  f"<td class='num r'>{money(a['v'])}</td>"
-                 f"<td class='num r'>{p1(a['v'] / sold[e] * 100)}</td></tr>")
+                 f"<td class='num r'>{p1(a['v'] / sold[k] * 100)}</td></tr>")
     d2 = f"""<section><div class="shead"><h2>Returgrad pr opprinnelig selger</h2>
   <p>Returer i {esc(mnd)} tilskrevet selgeren av det siste foreg&aring;ende
-     salget av samme vare (EAN) i samme butikk. Personlige selgere med minst
-     100k i salg i {esc(mnd)}.</p></div>
+     salget av samme vare (EAN) i samme butikk. &Eacute;n rad pr selger og
+     butikk; personlige selgere med minst 100k i salg i butikken i
+     {esc(mnd)}.</p></div>
 <div class="tw"><table>
   <thead><tr><th>Selger</th><th>Butikk</th><th class="r">Salg {esc(mnd)}</th>
     <th class="r">Returer tilskrevet</th><th class="r">Returverdi</th>
