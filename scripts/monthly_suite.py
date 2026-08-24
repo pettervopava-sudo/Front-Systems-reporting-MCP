@@ -1129,8 +1129,7 @@ def _merker_ytd_section(ry, rm, mnd):
                 d[y][1] += q * float(r["Cost"] or 0)
     def vis(b, y):
         return agg[b][y][0] >= MERKE_MIN_YTD
-    names = [b for b in agg
-             if any(vis(b, y) for y in years) and agg[b][ry][0] > 0]
+    names = [b for b in agg if vis(b, ry)]
     names.sort(key=lambda b: -(agg[b][ry][0] if vis(b, ry) else 0))
     y0, y1, y2 = years
     def cells(b):
@@ -1171,7 +1170,7 @@ def _merker_ytd_section(ry, rm, mnd):
     return f"""<section class="nkl"><div class="shead"><h2>Merker med h&oslash;yest omsetning &mdash; YTD</h2>
   <p>Januar&ndash;{esc(mnd)}, {y0}&ndash;{ry}. Terskel {nf(MERKE_MIN_YTD)} kr
      pr &aring;r &mdash; celler under terskelen vises ikke (PPT-utgavens
-     konvensjon); kun merker med omsetning i {ry}, sortert etter {ry}.
+     konvensjon); kun merker over terskelen i {ry}, sortert etter {ry}.
      Nedlagte butikker inng&aring;r i merketallene, som i PPT-utgaven.
      Sum-raden summerer de viste cellene.</p></div>
 <div class="tw"><table>
