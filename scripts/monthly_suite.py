@@ -154,9 +154,9 @@ def linjestore_sum(y, months):
             continue
         for n, a in d["stores"].items():
             t = out.setdefault(n, {"rev": 0.0, "cost": 0.0, "rab": 0.0,
-                                   "trans": 0})
-            for k in ("rev", "cost", "rab"):
-                t[k] += a[k]
+                                   "full": 0.0, "trans": 0})
+            for k in ("rev", "cost", "rab", "full"):
+                t[k] += a.get(k, 0.0)
             t["trans"] += a["trans"]
     return out
 
@@ -336,7 +336,7 @@ def linjestore_closed(y, months):
     """The deck's 'Nedlagte butikker' bucket: every unmapped stock except the
     deck's explicit exclusions (BMB, outlets, pop-ups, test and decommissioned
     internal stocks), summed over the months."""
-    tot = {"rev": 0.0, "cost": 0.0, "trans": 0}
+    tot = {"rev": 0.0, "cost": 0.0, "rab": 0.0, "full": 0.0, "trans": 0}
     for m in months:
         d = MR.linjestore(y, m)
         if not d:
@@ -344,7 +344,9 @@ def linjestore_closed(y, months):
         for a in d["unmapped"].values():
             if NONCHAIN.search(a["name"]):
                 continue
-            tot["rev"] += a["rev"]; tot["cost"] += a["cost"]; tot["trans"] += a["trans"]
+            tot["rev"] += a["rev"]; tot["cost"] += a["cost"]
+            tot["rab"] += a.get("rab", 0.0); tot["full"] += a.get("full", 0.0)
+            tot["trans"] += a["trans"]
     return tot
 
 
@@ -525,6 +527,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
         netto = a["rev"] / 1.25
         return netto, netto - a["cost"]
     def val(a):
+        if metric == "rabpct":
+            return a["rab"] / a["full"] * 100 if a.get("full") else None
         if metric == "snitt":
             return a["rev"] / a["trans"] if a.get("trans") else None
         netto, bf = netto_bf(a)
@@ -546,6 +550,10 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
             rev = sum(a["rev"] for a in d.values()); cost = sum(a["cost"] for a in d.values())
             if metric == "bfp":
                 chain[y] = val({"rev": rev, "cost": cost})
+            elif metric == "rabpct":
+                fu = sum(a.get("full", 0) for a in d.values())
+                ra = sum(a.get("rab", 0) for a in d.values())
+                chain[y] = ra / fu * 100 if fu else None
             elif metric == "snitt":
                 tr = sum(a.get("trans", 0) for a in d.values())
                 chain[y] = rev / tr if tr else None
@@ -555,8 +563,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
     allv = [v for v in vals.values() if v is not None] + \
            [v for _, cv, _ in extra for v in cv.values() if v is not None]
     vmax = max(allv)
-    if metric == "bfp":
-        axis, step, unit = max(50.0, (vmax // 10 + 1) * 10), 10, lambda t: f"{t}%"
+    if metric in ("bfp", "rabpct"):
+        axis, step, unit = max(45.0, (vmax // 10 + 1) * 10), 10, lambda t: f"{t}%"
     elif metric == "snitt":
         step = 1000
         axis, unit = (vmax // step + 1) * step, lambda t: nf(t)
@@ -564,7 +572,7 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
         step = 1e6 if vmax <= 3.5e6 else 5e6 if vmax <= 20e6 else 10e6
         axis, unit = (vmax // step + 1) * step, lambda t: f"{t / 1e6:.0f}M"
     def lab(v):
-        if metric == "bfp":
+        if metric in ("bfp", "rabpct"):
             return f"{v:.1f}".replace(".", ",").replace("-", "&minus;") + "%"
         if metric == "snitt":
             return nf(v)
@@ -579,7 +587,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
          f'aria-label="{title} {years[0]}&ndash;{ry}">', '<g class="axis">']
     by = TOP + n_rows * RH + 14
     head = {"bfp": "BF %", "bfkr": "BF i kroner",
-            "snitt": "Omsetning pr transaksjon"}[metric]
+            "snitt": "Omsetning pr transaksjon",
+            "rabpct": "Rabatt av fullpris"}[metric]
     for gi, y in enumerate(years):
         gx = L + gi * GW
         s.append(f'<text x="{gx + LW / 2:.1f}" y="16" text-anchor="middle" class="yh">{y}</text>')
@@ -617,6 +626,8 @@ def _store_metric_chart(per_year, years, mnd, title, sub, metric, closed=None):
     def aria(label, y, v):
         if v is None:
             return ""
+        if metric == "rabpct":
+            return (f"{label} {esc(mnd)} {y}: rabatt " + lab(v) + " av fullpris")
         if metric == "snitt":
             return f"{label} {esc(mnd)} {y}: snitt {nf(v)} kr pr transaksjon"
         return (f"{label} {esc(mnd)} {y}: " + ("BF " + lab(v) if metric == "bfp"
@@ -649,9 +660,9 @@ def rolling_sum(pairs):
             continue
         for n, a in d["stores"].items():
             t = out.setdefault(n, {"rev": 0.0, "cost": 0.0, "rab": 0.0,
-                                   "trans": 0})
-            for k in ("rev", "cost", "rab"):
-                t[k] += a[k]
+                                   "full": 0.0, "trans": 0})
+            for k in ("rev", "cost", "rab", "full"):
+                t[k] += a.get(k, 0.0)
             t["trans"] += a["trans"]
     return out
 
@@ -900,6 +911,197 @@ def inject_sesong(ry, rm, mnd, outdir):
         raise SystemExit("04 injection not pure ASCII")
     f.write_text(html, encoding="ascii")
     print(f"  injiserte sesongmatriser i {f}", file=sys.stderr)
+
+
+def _rab_nokkel_chart(per, mnd, ry, title, sub):
+    """Noekkeltall rabatter: four lanes per store -- rabatt av fullpris,
+    rabatt i kroner, brutto omsetning og BF % -- sorted by BF % desc."""
+    def bfp(a):
+        netto = a["rev"] / 1.25
+        return (netto - a["cost"]) / netto * 100 if netto else None
+    def rp(a):
+        return a["rab"] / a["full"] * 100 if a.get("full") else None
+    lanes = [
+        ("Rabatt av fullpris", rp,
+         lambda v: f"{v:.0f}%".replace("-", "&minus;"), 45.0),
+        ("Rabatt i kroner", lambda a: a["rab"],
+         lambda v: nf(v / 1000) + "K", None),
+        ("Brutto omsetning", lambda a: a["rev"],
+         lambda v: f"{v / 1e6:.1f}".replace(".", ",") + "M", None),
+        ("BF %", bfp, lambda v: f"{v:.0f}%".replace("-", "&minus;"), 45.0),
+    ]
+    names = sorted(per, key=lambda n: -(bfp(per[n]) or -1e9))
+    maxes = []
+    for _t, get, _l, ax in lanes:
+        vals = [get(per[n]) for n in names]
+        vals = [v for v in vals if v is not None]
+        maxes.append(ax if ax else max(vals) * 1.02)
+    W, L, RH, TOP = 1080, 150, 21, 46
+    GW = (W - L - 8) / 4
+    GG, LAB = 24, 46
+    LW = GW - GG - LAB
+    n_rows = len(names)
+    H = TOP + n_rows * RH + 26
+    s = [f'<svg class="sbf" viewBox="0 0 {W} {H}" role="img" aria-label="{title}">',
+         '<g class="axis">']
+    for gi, (t, _g, _l, _a) in enumerate(lanes):
+        gx = L + gi * GW
+        s.append(f'<text x="{gx + LW / 2:.1f}" y="{TOP - 12}" text-anchor="middle" '
+                 f'class="chead" data-ci="{gi}" tabindex="0">{t}</text>')
+    s.append('</g>')
+    for i, n in enumerate(names):
+        a = per[n]
+        yy = TOP + i * RH
+        vals = [g(a) for _t, g, _l, _x in lanes]
+        flat = "|".join("" if v is None else f"{v:.4f}" for v in vals)
+        s.append(f'<g class="srow" data-vals="{flat}" transform="translate(0,{yy:.1f})">')
+        s.append(f'<line class="rl" x1="{L - 6}" x2="{W - 8}" y1="{RH:.1f}" y2="{RH:.1f}"/>')
+        s.append(f'<text class="sl" x="{L - 10}" y="{RH - 6:.1f}" '
+                 f'text-anchor="end">{esc(n.replace("Høyer ", ""))}</text>')
+        for gi, ((t, g, lab, _x), v) in enumerate(zip(lanes, vals)):
+            gx = L + gi * GW
+            if v is None:
+                s.append(f'<text class="na" x="{gx + 4}" y="{RH - 6:.1f}">&ndash;</text>')
+                continue
+            w = LW * v / maxes[gi] if v > 0 else 0
+            s.append(f'<g class="pt" tabindex="0" role="img" '
+                     f'aria-label="{esc(n)} {esc(mnd)} {ry}: {t.replace("&", "og")} {lab(v)}">'
+                     f'<rect x="{gx:.1f}" y="4" width="{max(w, 1):.1f}" '
+                     f'height="{RH - 8}" fill="var(--slate)"/>'
+                     f'<text class="vl" x="{gx + max(w, 1) + 4:.1f}" '
+                     f'y="{RH - 6:.1f}">{lab(v)}</text></g>')
+        s.append('</g>')
+    s.append("</svg>")
+    return f"""<section><div class="shead"><h2>{title}</h2><p>{sub}</p></div>
+<div class="plot">{"".join(s)}</div></section>"""
+
+
+RABATT_BAND = [(0, 0, "0%"), (0, 10, "Inntil 10%"), (10, 20, "20%"),
+               (20, 30, "30%"), (30, 40, "40%"), (40, 50, "50%"),
+               (50, 60, "60%"), (60, 70, "70%"), (70, 1e9, "70% &gt;")]
+
+
+def _rabatt_band_matrix(ry, rm, months, pred, title, sub):
+    """Share of revenue sold within each discount band, per store.
+    Lines flagged IsEmployee (ansattekjoep) are excluded, as the deck does."""
+    import json as _json
+    per = {}
+    for m in months:
+        f = MR.CACHE / f"klines_{ry:04d}-{m:02d}.json"
+        if not f.exists():
+            return ""
+        for r in _json.load(open(f)):
+            store = LR.STOCK_STORE.get(r["STOCKID_FK"])
+            if store is None or r.get("IsEmployee"):
+                continue
+            if not pred(_sesong_bucket(r.get("Season"), ry)):
+                continue
+            q = float(r["Qty"] or 0)
+            rev = q * float(r["Price"] or 0)
+            fp = float(r["FullPrice"] or 0)
+            dc = float(r["Discount"] or 0)
+            pct = dc / fp * 100 if fp else 0.0
+            # deckets baandkonvensjon: etiketten er OeVRE grense --
+            # "20%" = [10, 20), "Inntil 10%" = (0, 10), "70% >" = >= 70.
+            if pct <= 0:
+                bi = 0
+            else:
+                for bi in range(1, len(RABATT_BAND)):
+                    if bi == len(RABATT_BAND) - 1 or pct < bi * 10:
+                        break
+            d = per.setdefault(store, [0.0] * len(RABATT_BAND))
+            d[bi] += rev
+            t = per.setdefault("Sum kjeden", [0.0] * len(RABATT_BAND))
+            t[bi] += rev
+    if not per:
+        return ""
+    def nokey(n):
+        return n.lower().replace("æ", "{").replace("ø", "|").replace("å", "}")
+    rows = ""
+    order = sorted((k for k in per if k != "Sum kjeden"), key=nokey)
+    for name in order + ["Sum kjeden"]:
+        d = per[name]
+        tot = sum(d)
+        if not tot:
+            continue
+        cls = " class='total'" if name == "Sum kjeden" else ""
+        cells = "".join(
+            f"<td class='num r{' gs' if i == 0 else ''}'>"
+            + (p1(v / tot * 100) if v else "") + "</td>"
+            for i, v in enumerate(d))
+        rows += (f"<tr{cls}><td>" + esc(name.replace("Høyer ", "")) + "</td>"
+                 + cells + "</tr>")
+    bh = "".join(f"<th class='r{' gs' if i == 0 else ''}'>{l}</th>"
+                 for i, (_lo, _hi, l) in enumerate(RABATT_BAND))
+    return f"""<section class="nkl"><div class="shead"><h2>{title}</h2><p>{sub}</p></div>
+<div class="tw"><table>
+  <thead><tr><th>Butikk</th>{bh}</tr></thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
+
+def _rabatt_sections(ry, rm, mnd, nkl_years, per_m, per_ytd, closed_ytd):
+    cur_ss = str((ry - 2000) * 100 + 1)
+    sub_n = ("Sortert etter BF %. Rabatt av fullpris = rabatt / fullpris; "
+             "bel&oslash;p i K er 1000 kr.")
+    band_sub = ("Andel av omsetningen solgt innen hvert rabattintervall "
+                "(radene summerer til 100&nbsp;%). Kolonnen er merket med "
+                "&oslash;vre grense (&laquo;20%&raquo; = 10&ndash;20&nbsp;%), "
+                "som i PPT-rapporten. Ansattekj&oslash;p er utelatt.")
+    out = _rab_nokkel_chart(
+        per_m, mnd, ry, f"N&oslash;kkeltall rabatter &mdash; {esc(mnd)}",
+        f"{esc(mnd)} {ry}, pr butikk. " + sub_n)
+    out += _rab_nokkel_chart(
+        per_ytd, f"hittil i {esc(mnd)}", ry,
+        "N&oslash;kkeltall rabatter &mdash; YTD",
+        f"Januar&ndash;{esc(mnd)} {ry}, pr butikk. " + sub_n)
+    out += _store_metric_chart(
+        per_3y_m := {y: (MR.linjestore(y, rm) or {}).get("stores", {})
+                     for y in nkl_years},
+        nkl_years, mnd,
+        f"Rabatt gitt i % &mdash; {esc(mnd)} siste 3 &aring;rene",
+        f"Snittrabatt av fullpris pr butikk, {esc(mnd)} {nkl_years[0]}&ndash;{ry}. "
+        f"Sortert etter {esc(mnd)} {ry}.",
+        "rabpct")
+    out += _store_metric_chart(
+        {y: linjestore_sum(y, range(1, rm + 1)) for y in nkl_years},
+        nkl_years, f"hittil i {esc(mnd)}",
+        "Rabatt gitt i % &mdash; YTD siste 3 &aring;rene",
+        f"Snittrabatt av fullpris pr butikk, hittil i &aring;r "
+        f"januar&ndash;{esc(mnd)} {nkl_years[0]}&ndash;{ry}. Sortert etter {ry}. "
+        f"Nedlagte butikker vises samlet.",
+        "rabpct", closed=closed_ytd)
+    out += _rabatt_band_matrix(
+        ry, rm, range(1, rm + 1), lambda b: b == cur_ss,
+        f"Rabatter p&aring; sesongvarer &mdash; YTD",
+        f"Sesong {cur_ss} (SS), januar&ndash;{esc(mnd)} {ry}. " + band_sub)
+    out += _rabatt_band_matrix(
+        ry, rm, range(1, rm + 1), lambda b: b in ("Base", "Carry-overs"),
+        f"Rabatter p&aring; basevarer &mdash; YTD",
+        f"Sesongene Base og Carry-overs, januar&ndash;{esc(mnd)} {ry}. " + band_sub)
+    return out
+
+
+def inject_rabatter(ry, rm, mnd, outdir, nkl_years, per_m, per_ytd, closed_ytd):
+    f = pathlib.Path(outdir) / "05_Rabatter.html"
+    if not f.exists():
+        return
+    html = f.read_text(encoding="ascii")
+    block = _rabatt_sections(ry, rm, mnd, nkl_years, per_m, per_ytd, closed_ytd)
+    if not block:
+        return
+    start = "<!-- RABATT-BUTIKK START -->"
+    end = "<!-- RABATT-BUTIKK END -->"
+    payload = start + block + end
+    if start in html:
+        import re as _re
+        html = _re.sub(_re.escape(start) + ".*?" + _re.escape(end),
+                       lambda _m: payload, html, flags=_re.S)
+    else:
+        html = html.replace("<footer>", payload + "\n<footer>", 1)
+    if not html.isascii():
+        raise SystemExit("05 injection not pure ASCII")
+    f.write_text(html, encoding="ascii")
+    print(f"  injiserte rabattseksjoner i {f}", file=sys.stderr)
 
 
 def summary_page(series_m, series_y, nkl, mnd, ry, window):
@@ -1285,6 +1487,11 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
     import hoyer_nye_kpi as HK
     asyncio.run(HK.ensure_klines([(ry, m) for m in range(1, rm + 1)]))
     inject_sesong(ry, rm, mnd, outdir)
+    closed_ytd = {y: linjestore_closed(y, range(1, rm + 1)) for y in nkl_years}
+    inject_rabatter(ry, rm, mnd, outdir, nkl_years,
+                    per_m and {n: a for n, a in
+                               ((MR.linjestore(ry, rm) or {}).get("stores", {})).items()},
+                    linjestore_sum(ry, range(1, rm + 1)), closed_ytd)
 
     for fname, content in files.items():
         if not content.isascii():

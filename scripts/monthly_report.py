@@ -220,7 +220,8 @@ async def ensure_linjeagg(months):
         await client.aclose()
 
 
-LINJESTORE_SELECT = ["SALEID", "STOCKID_FK", "Qty", "Price", "Cost", "Discount"]
+LINJESTORE_SELECT = ["SALEID", "STOCKID_FK", "Qty", "Price", "Cost",
+                     "Discount", "FullPrice"]
 
 
 def linjestore(y, m):
@@ -258,18 +259,21 @@ async def ensure_linjestore(months):
             if name is None:
                 a = unmapped.setdefault(str(stock), {
                     "name": r.get("Stock") or "?", "rev": 0.0, "cost": 0.0,
-                    "rab": 0.0, "sales": set()})
+                    "rab": 0.0, "full": 0.0, "sales": set()})
             else:
                 a = stores.setdefault(name, {"rev": 0.0, "cost": 0.0,
-                                             "rab": 0.0, "sales": set()})
+                                             "rab": 0.0, "full": 0.0,
+                                             "sales": set()})
             q = float(r["Qty"] or 0)
             a["rev"] += round(q * float(r["Price"] or 0), 2)
             a["cost"] += round(q * float(r["Cost"] or 0), 2)
             a["rab"] += round(q * float(r["Discount"] or 0), 2)
+            a["full"] += round(q * float(r["FullPrice"] or 0), 2)
             a["sales"].add(r["SALEID"])
         def pack(d):
             return {k: {"rev": round(v["rev"], 2), "cost": round(v["cost"], 2),
-                        "rab": round(v["rab"], 2), "trans": len(v["sales"]),
+                        "rab": round(v["rab"], 2), "full": round(v["full"], 2),
+                        "trans": len(v["sales"]),
                         **({"name": v["name"]} if "name" in v else {})}
                     for k, v in d.items()}
         json.dump({"month": f"{y:04d}-{m:02d}", "stores": pack(stores),
