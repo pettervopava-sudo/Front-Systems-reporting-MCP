@@ -683,6 +683,7 @@ def main():
     nxt = (ry + 1, 1) if rm == 12 else (ry, rm + 1)
     mnd = MR.MND[rm - 1]
 
+    LR.set_suite_month(ry, rm)
     entries = asyncio.run(MR.ensure_cache(nxt))
     reg_to_store, excluded = MR.build_reg_to_store(entries)
     A = lambda ms: MR.aggregate(ms, reg_to_store, excluded)

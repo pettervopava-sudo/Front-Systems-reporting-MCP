@@ -109,6 +109,7 @@ def main() -> None:
     ry, rm = int(args.month[:4]), int(args.month[5:7])
     import monthly_report as MR
     mnd = MR.MND[rm - 1]
+    LR.set_suite_month(ry, rm)
     reports = ROOT / "reports"
     out = pathlib.Path(args.out or reports / f"Manedsrapport_{mnd}_{ry}.pdf")
 
@@ -182,12 +183,16 @@ def main() -> None:
                 if not part.exists():
                     raise SystemExit(f"missing {part}")
                 content = part.read_text(encoding="ascii")
-            # For juli: 02/07 on disk are the juli-frame versions; assert no
-            # later-period leakage before binding them into the document.
-            # case-sensitive: the month is lowercase in running Norwegian
-            # text, while "August" with capital A is a common given name --
-            # a top seller named August must not trip the period gate.
-            leaks = re.findall(r"2026-0[89]|2026-1[0-2]|august|August 2026", content)
+            # Period-purity gate: nothing newer than the report month may
+            # appear in any bound part. Built from (ry, rm): later-month
+            # dates this year, any date next year, and later-month names in
+            # lowercase running text ("August" alone stays legal -- it is a
+            # common given name; "August 2026"-style with the year is not).
+            forbidden = ([rf"{ry}-{mm:02d}" for mm in range(rm + 1, 13)]
+                         + [rf"{ry + 1}-\d\d"]
+                         + [m for m in MR.MND[rm:]]
+                         + [rf"{m.capitalize()} {ry}" for m in MR.MND[rm:]])
+            leaks = re.findall("|".join(forbidden), content)
             if leaks:
                 raise SystemExit(f"period leakage in part {i+1}: {set(leaks)}")
             contents.append(content)

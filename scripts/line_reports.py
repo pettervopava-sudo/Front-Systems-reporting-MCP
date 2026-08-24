@@ -76,6 +76,9 @@ SYSTEM_SELLERS = {"webshop", "shopify integrasjon", "shopify", "integrasjon"}
 SPECIFIC_BRANDS = ["Polo Ralph Lauren", "By Malene Birger", "NN.07"]
 SELLER_MIN_TRANS = 40  # default for short windows; use --seller-min 100 for full months
 
+MND = ["januar", "februar", "mars", "april", "mai", "juni", "juli",
+       "august", "september", "oktober", "november", "desember"]
+
 SUITE = [
     ("01_Manedsrapport_juli_2026.html", "M&aring;nedsrapport juli"),
     ("02_Oppsummering.html", "Oppsummering"),
@@ -236,6 +239,13 @@ function bind(node,text){
   node.setAttribute("aria-label",text.replace(/\\n/g,". "));
 }
 """
+
+
+def set_suite_month(ry, rm):
+    """Point the suite nav's first entry at the edition's report 01."""
+    mnd = MND[rm - 1]
+    SUITE[0] = (f"01_Manedsrapport_{mnd}_{ry}.html",
+                f"M&aring;nedsrapport {mnd}")
 
 
 NAV_SUBSET = None  # set by build_all(only=...) so subset builds self-link only
@@ -682,6 +692,9 @@ def main():
                     help="comma-separated report numbers, e.g. 04,05,06,07")
     args = ap.parse_args()
     d0, d1 = dt.date.fromisoformat(args.dfrom), dt.date.fromisoformat(args.dto)
+    last = d1 - dt.timedelta(days=1)
+    if (d0.year, d0.month) == (last.year, last.month):
+        set_suite_month(d0.year, d0.month)  # full-month window: suite edition
     outdir = pathlib.Path(args.outdir); outdir.mkdir(parents=True, exist_ok=True)
 
     async def fetch():
