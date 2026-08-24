@@ -1104,6 +1104,117 @@ def inject_rabatter(ry, rm, mnd, outdir, nkl_years, per_m, per_ytd, closed_ytd):
     print(f"  injiserte rabattseksjoner i {f}", file=sys.stderr)
 
 
+MERKE_MIN_YTD = 2_300_000
+
+
+def _merker_ytd_section(ry, rm, mnd):
+    """Generelle noekkeltall merker YTD: brands over the threshold in any of
+    the three years -- brutto, endring, BF kr and BF % per year."""
+    import json as _json
+    years = (ry - 2, ry - 1, ry)
+    agg = {}
+    for y in years:
+        for m in range(1, rm + 1):
+            f = MR.CACHE / f"klines_{y:04d}-{m:02d}.json"
+            if not f.exists():
+                return ""
+            for r in _json.load(open(f)):
+                # klines er allerede kjeden + nedlagte Hoeyer-butikker;
+                # decket teller nedlagte med i merketallene (bevist mot PRL
+                # 2024 paa kronen), saa ingen butikkfiltrering her.
+                b = (r.get("Brand") or "(ukjent)").strip() or "(ukjent)"
+                q = float(r["Qty"] or 0)
+                d = agg.setdefault(b, {yy: [0.0, 0.0] for yy in years})
+                d[y][0] += q * float(r["Price"] or 0)
+                d[y][1] += q * float(r["Cost"] or 0)
+    def vis(b, y):
+        return agg[b][y][0] >= MERKE_MIN_YTD
+    names = [b for b in agg if any(vis(b, y) for y in years)]
+    names.sort(key=lambda b: -(agg[b][ry][0] if vis(b, ry) else 0))
+    y0, y1, y2 = years
+    def cells(b):
+        d = agg[b]
+        out = ""
+        for y in years:
+            out += f"<td class='num r'>{nf(d[y][0]) if vis(b, y) else ''}</td>"
+        for cur, prev in ((y1, y0), (y2, y1)):
+            if vis(b, cur) and vis(b, prev):
+                out += f"<td class='num r'>{MR.pct(d[cur][0], d[prev][0])}</td>"
+            else:
+                out += "<td class='num r'></td>"
+        for y in years:
+            rev, cost = d[y]
+            out += (f"<td class='num r'>{nf(rev / 1.25 - cost)}</td>"
+                    if vis(b, y) else "<td class='num r'></td>")
+        for y in years:
+            rev, cost = d[y]
+            netto = rev / 1.25
+            out += (f"<td class='num r'>{p1((netto - cost) / netto * 100)}</td>"
+                    if vis(b, y) else "<td class='num r'></td>")
+        return out
+    rows = "".join(f"<tr><td>{esc(b)}</td>{cells(b)}</tr>" for b in names)
+    tot = {y: [sum(agg[b][y][0] for b in names if vis(b, y)),
+               sum(agg[b][y][1] for b in names if vis(b, y))] for y in years}
+    trow = "<tr class='total'><td>Sum merker over terskel</td>"
+    for y in years:
+        trow += f"<td class='num r'>{nf(tot[y][0])}</td>"
+    for cur, prev in ((y1, y0), (y2, y1)):
+        trow += f"<td class='num r'>{MR.pct(tot[cur][0], tot[prev][0])}</td>"
+    for y in years:
+        trow += f"<td class='num r'>{nf(tot[y][0] / 1.25 - tot[y][1])}</td>"
+    for y in years:
+        netto = tot[y][0] / 1.25
+        trow += f"<td class='num r'>{p1((netto - tot[y][1]) / netto * 100)}</td>"
+    trow += "</tr>"
+    yh = "".join(f"<th class='r'>{y}</th>" for y in years)
+    return f"""<section class="nkl"><div class="shead"><h2>Merker med h&oslash;yest omsetning &mdash; YTD</h2>
+  <p>Januar&ndash;{esc(mnd)}, {y0}&ndash;{ry}. Terskel {nf(MERKE_MIN_YTD)} kr
+     pr &aring;r &mdash; celler under terskelen vises ikke (PPT-utgavens
+     konvensjon); sortert etter {ry}. Nedlagte butikker inng&aring;r i
+     merketallene, som i PPT-utgaven. Sum-raden summerer de viste
+     cellene.</p></div>
+<div class="tw"><table>
+  <thead>
+    <tr><th></th><th class="grp gs" colspan="3">Brutto omsetning</th>
+      <th class="grp gs" colspan="2">Endring</th>
+      <th class="grp gs" colspan="3">BF i kroner</th>
+      <th class="grp gs" colspan="3">BF %</th></tr>
+    <tr><th>Merke</th><th class="r gs">{y0}</th><th class="r">{y1}</th><th class="r">{y2}</th>
+      <th class="r gs">{y1}</th><th class="r">{y2}</th>
+      <th class="r gs">{y0}</th><th class="r">{y1}</th><th class="r">{y2}</th>
+      <th class="r gs">{y0}</th><th class="r">{y1}</th><th class="r">{y2}</th></tr>
+  </thead>
+  <tbody>{rows}{trow}</tbody></table></div></section>"""
+
+
+def inject_merker(ry, rm, mnd, outdir):
+    """Place the YTD brand table right below the month brand table in 06."""
+    f = pathlib.Path(outdir) / "06_Merker.html"
+    if not f.exists():
+        return
+    html = f.read_text(encoding="ascii")
+    block = _merker_ytd_section(ry, rm, mnd)
+    if not block:
+        return
+    start = "<!-- MERKER-YTD START -->"
+    end = "<!-- MERKER-YTD END -->"
+    payload = start + block + end
+    if start in html:
+        import re as _re
+        html = _re.sub(_re.escape(start) + ".*?" + _re.escape(end),
+                       lambda _m: payload, html, flags=_re.S)
+    else:
+        anchor = html.find("Merker med h&oslash;yest omsetning")
+        pos = html.find("</section>", anchor)
+        assert pos > 0
+        pos += len("</section>")
+        html = html[:pos] + payload + html[pos:]
+    if not html.isascii():
+        raise SystemExit("06 injection not pure ASCII")
+    f.write_text(html, encoding="ascii")
+    print(f"  injiserte merker-YTD i {f}", file=sys.stderr)
+
+
 def summary_page(series_m, series_y, nkl, mnd, ry, window):
     """Report 02: the deck's 'Oppsummering' chart pairs -- month and YTD --
     plus the per-store Noekkeltall table at the bottom."""
@@ -1485,8 +1596,10 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
     files["08_Diverse.html"] = page("08_Diverse.html", "08", "Diverse", window, body)
 
     import hoyer_nye_kpi as HK
-    asyncio.run(HK.ensure_klines([(ry, m) for m in range(1, rm + 1)]))
+    asyncio.run(HK.ensure_klines(
+        [(y, m) for y in (ry - 2, ry - 1, ry) for m in range(1, rm + 1)]))
     inject_sesong(ry, rm, mnd, outdir)
+    inject_merker(ry, rm, mnd, outdir)
     closed_ytd = {y: linjestore_closed(y, range(1, rm + 1)) for y in nkl_years}
     inject_rabatter(ry, rm, mnd, outdir, nkl_years,
                     per_m and {n: a for n, a in

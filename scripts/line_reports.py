@@ -359,9 +359,14 @@ function bind(node,text){
 """
 
 
+CUR_MND = None  # settes av set_suite_month; brukes i maanedsavhengige titler
+
+
 def set_suite_month(ry, rm):
     """Point the suite nav's first entry at the edition's report 01."""
+    global CUR_MND
     mnd = MND[rm - 1]
+    CUR_MND = mnd
     SUITE[0] = (f"01_Manedsrapport_{mnd}_{ry}.html",
                 f"M&aring;nedsrapport {mnd}")
 
@@ -662,7 +667,9 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
     <th class="r">Omsetning</th><th class="r">BF kr</th><th class="r">BF %</th>
     <th class="r">Plagg</th></tr></thead>
   <tbody>{brows}</tbody></table></div></section>"""
-    body = f"""<section><div class="shead"><h2>Merker med h&oslash;yest omsetning</h2>
+    mtit = (f"Merker med h&oslash;yest omsetning &mdash; {CUR_MND}"
+            if CUR_MND else "Merker med h&oslash;yest omsetning")
+    body = f"""<section><div class="shead"><h2>{mtit}</h2>
   <p>Topp 20 av {nf(len(set(l.brand for l in lines)))} merker i perioden.</p></div>
 <div class="tw"><table>
   <thead><tr><th>Merke</th><th style="width:13%">Andel</th>
