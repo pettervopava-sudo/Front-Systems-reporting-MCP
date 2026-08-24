@@ -246,6 +246,15 @@ def build_k1(lines, start_agg, end_agg, mnd, ry):
 
 
 # ---------------------------------------------------------------- K2 ----
+def hovedbutikk(cnt):
+    """Dominant butikk + '+N' naar det finnes flere."""
+    if not cnt:
+        return "&ndash;"
+    top = max(cnt, key=cnt.get)
+    extra = len(cnt) - 1
+    return esc(top) + (f" <span class='k'>+{extra}</span>" if extra else "")
+
+
 def build_k2(month_lines, hist_lines, mnd, ry):
     ret = [l for l in month_lines if l.qty < 0]
     pos_sid_dates = collections.defaultdict(set)
@@ -268,11 +277,14 @@ def build_k2(month_lines, hist_lines, mnd, ry):
         return sellers.pop() if len(sellers) == 1 else "(flertydig)"
 
     # -- del 1: pr utfoerende ------------------------------------------------
-    per_emp = collections.defaultdict(lambda: {"n": 0, "v": 0.0, "bytte": 0})
+    per_emp = collections.defaultdict(
+        lambda: {"n": 0, "v": 0.0, "bytte": 0,
+                 "stores": collections.Counter()})
     for l in ret:
         a = per_emp[l.emp or "(tom)"]
         a["n"] += 1
         a["v"] += -l.rev
+        a["stores"][(l.store or "?").replace("Høyer ", "")] += -l.rev
         if l.date in pos_sid_dates.get(l.sid, set()):
             a["bytte"] += 1
     tot_n = sum(a["n"] for a in per_emp.values())
@@ -281,6 +293,7 @@ def build_k2(month_lines, hist_lines, mnd, ry):
     rows = ""
     for e, a in sorted(per_emp.items(), key=lambda kv: -kv[1]["v"])[:25]:
         rows += (f"<tr><td>{esc(e)}</td>"
+                 f"<td>{hovedbutikk(a['stores'])}</td>"
                  f"<td>{'Felles/system' if is_felles(e) else 'Personlig'}</td>"
                  f"<td class='num r'>{nf(a['n'])}</td>"
                  f"<td class='num r'>{money(a['v'])}</td>"
@@ -299,7 +312,7 @@ def build_k2(month_lines, hist_lines, mnd, ry):
 <section><div class="shead"><h2>Returer pr utf&oslash;rende bruker</h2>
   <p>{esc(mnd)} {ry}, topp 25 etter returverdi. Bel&oslash;p merket <i>k</i> er i 1000 kr.</p></div>
 <div class="tw"><table>
-  <thead><tr><th>Bruker</th><th>Type</th><th class="r">Antall</th>
+  <thead><tr><th>Bruker</th><th>Butikk</th><th>Type</th><th class="r">Antall</th>
     <th class="r">Returverdi</th><th class="r">Snitt kr</th>
     <th class="r">Andel bytte</th></tr></thead>
   <tbody>{rows}</tbody></table></div></section>"""
@@ -319,14 +332,17 @@ def build_k2(month_lines, hist_lines, mnd, ry):
             a["n"] += 1
             a["v"] += -l.rev
     sold = collections.defaultdict(float)
+    sold_store = collections.defaultdict(collections.Counter)
     for l in month_lines:
         if l.qty > 0:
             sold[l.emp] += l.rev
+            sold_store[l.emp][(l.store or "?").replace("Høyer ", "")] += l.rev
     rows = ""
     sellers = [e for e, v in sold.items() if v >= 100000 and not is_felles(e)]
     for e in sorted(sellers, key=lambda e: -(attributed[e]["v"] / sold[e])):
         a = attributed[e]
         rows += (f"<tr><td>{esc(e)}</td>"
+                 f"<td>{hovedbutikk(sold_store[e])}</td>"
                  f"<td class='num r'>{money(sold[e])}</td>"
                  f"<td class='num r'>{nf(a['n'])}</td>"
                  f"<td class='num r'>{money(a['v'])}</td>"
@@ -336,7 +352,7 @@ def build_k2(month_lines, hist_lines, mnd, ry):
      salget av samme vare (EAN) i samme butikk. Personlige selgere med minst
      100k i salg i {esc(mnd)}.</p></div>
 <div class="tw"><table>
-  <thead><tr><th>Selger</th><th class="r">Salg {esc(mnd)}</th>
+  <thead><tr><th>Selger</th><th>Butikk</th><th class="r">Salg {esc(mnd)}</th>
     <th class="r">Returer tilskrevet</th><th class="r">Returverdi</th>
     <th class="r">Returgrad</th></tr></thead>
   <tbody>{rows}</tbody></table></div>
