@@ -1232,81 +1232,104 @@ def _brand_logo_uri(brand):
     return f"data:{mime};base64," + base64.b64encode(data).decode()
 
 
-def _brand_store_table(brand, agg_rows, title, sub, logo):
-    order = sorted(agg_rows.items(), key=lambda kv: -kv[1][0])
-    if not order:
-        return ""
-    mx = order[0][1][0] or 1
-    tot = [sum(v[0] for _n, v in order), sum(v[1] for _n, v in order),
-           sum(v[2] for _n, v in order)]
+def _brand_store_table(brand, per_year, years, title, sub, logo):
+    """One brand, three years side by side: brutto and BF % per store,
+    Nedlagte butikker aggregated, Grand Total pinned."""
+    ry = years[-1]
+    names = sorted({n for d in per_year.values() for n in d
+                    if n != "Nedlagte butikker"},
+                   key=lambda n: -per_year[ry].get(n, [0, 0])[0])
+    has_closed = any("Nedlagte butikker" in d and d["Nedlagte butikker"][0]
+                     for d in per_year.values())
     rows = ""
-    for n, (rev, cost, qty) in order:
-        netto = rev / 1.25
-        rows += (f"<tr><td>{esc(n.replace('Høyer ', ''))}</td>"
-                 f"<td><div class='track'><div class='fill alt' "
-                 f"style='width:{rev / mx * 100:.1f}%'></div></div></td>"
-                 f"<td class='num r'>{nf(rev)}</td>"
-                 f"<td class='num r'>{nf(netto - cost)}</td>"
-                 f"<td class='num r'>{p1((netto - cost) / netto * 100) if netto else '&ndash;'}</td>"
-                 f"<td class='num r'>{nf(qty)}</td></tr>")
-    netto_t = tot[0] / 1.25
-    rows += (f"<tr class='total'><td>Sum</td><td></td>"
-             f"<td class='num r'>{nf(tot[0])}</td>"
-             f"<td class='num r'>{nf(netto_t - tot[1])}</td>"
-             f"<td class='num r'>{p1((netto_t - tot[1]) / netto_t * 100)}</td>"
-             f"<td class='num r'>{nf(tot[2])}</td></tr>")
+    def rowcells(get):
+        out = ""
+        for i, y in enumerate(years):
+            rev, _c = get(y)
+            gs = " gs" if i == 0 else ""
+            out += f"<td class='num r{gs}'>{nf(rev) if rev else ''}</td>"
+        for i, y in enumerate(years):
+            rev, cost = get(y)
+            gs = " gs" if i == 0 else ""
+            if rev:
+                netto = rev / 1.25
+                out += f"<td class='num r{gs}'>{p1((netto - cost) / netto * 100)}</td>"
+            else:
+                out += f"<td class='num r{gs}'></td>"
+        return out
+    for n in names:
+        rows += ("<tr><td>" + esc(n.replace("Høyer ", "")) + "</td>"
+                 + rowcells(lambda y, n=n: per_year[y].get(n, [0, 0])) + "</tr>")
+    if has_closed:
+        rows += ("<tr><td>Nedlagte butikker</td>"
+                 + rowcells(lambda y: per_year[y].get("Nedlagte butikker", [0, 0]))
+                 + "</tr>")
+    def tot(y):
+        rev = sum(v[0] for v in per_year[y].values())
+        cost = sum(v[1] for v in per_year[y].values())
+        return [rev, cost]
+    rows += ("<tr class='total'><td>Sum</td>" + rowcells(tot) + "</tr>")
     img = (f'<img class="blogo" src="{logo}" alt="">' if logo else "")
-    return f"""<section><div class="shead"><h2>{img}{title}</h2><p>{sub}</p></div>
+    yh = "".join(f"<th class='r{' gs' if i == 0 else ''}'>{y}</th>"
+                 for i, y in enumerate(years))
+    return f"""<section class="nkl"><div class="shead"><h2>{img}{title}</h2><p>{sub}</p></div>
 <div class="tw"><table>
-  <thead><tr><th>Butikk</th><th style="width:13%">Andel</th>
-    <th class="r">Omsetning</th><th class="r">BF kr</th><th class="r">BF %</th>
-    <th class="r">Plagg</th></tr></thead>
+  <thead>
+    <tr><th></th><th class="grp gs" colspan="3">Brutto omsetning</th>
+      <th class="grp gs" colspan="3">BF %</th></tr>
+    <tr><th>Butikk</th>{yh}{yh}</tr>
+  </thead>
   <tbody>{rows}</tbody></table></div></section>"""
 
 
 def _top5_brand_sections(ry, rm, mnd):
-    """Month + YTD per-store tables for the month's top five brands, with
-    brand logos where available."""
+    """Month + YTD three-year per-store tables for the report month's top
+    five brands, with brand logos where available."""
     import json as _json
+    years = (ry - 2, ry - 1, ry)
     def collect(months):
-        per = {}
-        for m in months:
-            f = MR.CACHE / f"klines_{ry:04d}-{m:02d}.json"
-            if not f.exists():
-                return None
-            for r in _json.load(open(f)):
-                store = LR.STOCK_STORE.get(r["STOCKID_FK"])
-                if store is None:
-                    continue
-                b = (r.get("Brand") or "").strip()
-                if not b:
-                    continue
-                q = float(r["Qty"] or 0)
-                d = per.setdefault(b, {})
-                a = d.setdefault(store, [0.0, 0.0, 0.0])
-                a[0] += q * float(r["Price"] or 0)
-                a[1] += q * float(r["Cost"] or 0)
-                a[2] += q
+        per = {y: {} for y in years}
+        for y in years:
+            for m in months:
+                f = MR.CACHE / f"klines_{y:04d}-{m:02d}.json"
+                if not f.exists():
+                    return None
+                for r in _json.load(open(f)):
+                    b = (r.get("Brand") or "").strip()
+                    if not b:
+                        continue
+                    store = LR.STOCK_STORE.get(r["STOCKID_FK"])
+                    name = store if store else "Nedlagte butikker"
+                    q = float(r["Qty"] or 0)
+                    a = per[y].setdefault(b, {}).setdefault(name, [0.0, 0.0])
+                    a[0] += q * float(r["Price"] or 0)
+                    a[1] += q * float(r["Cost"] or 0)
         return per
     month = collect([rm])
     ytd = collect(range(1, rm + 1))
     if month is None or ytd is None:
         return ""
-    top5 = sorted(month, key=lambda b: -sum(v[0] for v in month[b].values()))[:5]
+    rank = {b: sum(v[0] for v in d.values())
+            for b, d in month[ry].items()}
+    top5 = sorted(rank, key=lambda b: -rank[b])[:5]
     out = ('<style>.blogo{height:26px;vertical-align:middle;margin-right:10px;'
            'background:#fff;border-radius:3px;padding:2px 5px;'
            'box-sizing:content-box;}</style>')
     for i, b in enumerate(top5, start=1):
         logo = _brand_logo_uri(b)
-        rev_m = sum(v[0] for v in month[b].values())
-        rev_y = sum(v[0] for v in ytd.get(b, {}).values())
         out += _brand_store_table(
-            b, month[b], f"{esc(b)} pr butikk &mdash; {esc(mnd)}",
-            f"Nr. {i} i {esc(mnd)} {ry} med {nf(rev_m)} kr.", logo)
+            b, {y: month[y].get(b, {}) for y in years}, years,
+            f"{esc(b)} pr butikk &mdash; {esc(mnd)}",
+            f"Nr. {i} i {esc(mnd)} {ry} med {nf(rank[b])} kr. "
+            f"{esc(mnd).capitalize()} {years[0]}&ndash;{ry}; nedlagte butikker "
+            f"samlet, som i PPT-utgaven.", logo)
         out += _brand_store_table(
-            b, ytd.get(b, {}), f"{esc(b)} pr butikk &mdash; YTD",
-            f"Januar&ndash;{esc(mnd)} {ry}: {nf(rev_y)} kr.", logo)
+            b, {y: ytd[y].get(b, {}) for y in years}, years,
+            f"{esc(b)} pr butikk &mdash; YTD",
+            f"Januar&ndash;{esc(mnd)}, {years[0]}&ndash;{ry}; nedlagte "
+            f"butikker samlet.", logo)
     return out
+
 
 
 def inject_merker(ry, rm, mnd, outdir):
