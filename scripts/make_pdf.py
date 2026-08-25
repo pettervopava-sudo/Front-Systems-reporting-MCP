@@ -122,7 +122,8 @@ def main() -> None:
              reports / "02_Oppsummering.html",
              reports / "03_Omsetning_og_BF.html",
              *middle,
-             reports / "08_Diverse.html"]
+             reports / "08_Selgere_KPK.html",
+             reports / "09_Diverse.html"]
 
     def combine_html(contents, out_html, anchors):
         """One self-contained page from the parts, same order as the PDF.

@@ -85,8 +85,9 @@ SUITE = [
     ("04_Sesonger.html", "Sesonger"),
     ("05_Rabatter.html", "Rabatter"),
     ("06_Merker.html", "Merker"),
-    ("07_Selgere.html", "Selgere"),
-    ("08_Diverse.html", "Diverse"),
+    ("07_Selgere.html", "Selgere PPK"),
+    ("08_Selgere_KPK.html", "Selgere KPK"),
+    ("09_Diverse.html", "Diverse"),
 ]
 
 
@@ -735,7 +736,7 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
   skalert til {SELLER_MIN_TRANS}. Systembrukere (Webshop, Shopify-integrasjon)
   er holdt utenfor.</div>"""
     files["07_Selgere.html"] = page(
-        "07_Selgere.html", "07", "Selgere &mdash; PPK og KPK", window_note, body)
+        "07_Selgere.html", "07", "Selgere &mdash; PPK", window_note, body)
 
     # ---- 07 Diverse --------------------------------------------------------
     per_sale = collections.defaultdict(lambda: {"rev": 0.0, "store": None, "date": ""})
@@ -769,8 +770,8 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
 <div class="note"><strong>St&oslash;rste kunder</strong> er bevisst utelatt:
   det krever kundeidentifikatorer, og denne rapportserien henter ikke kundedata
   fra API-et. Ta det som en egen beslutning hvis behovet finnes.</div>"""
-    files["08_Diverse.html"] = page(
-        "08_Diverse.html", "08", "Diverse", window_note, body)
+    files["09_Diverse.html"] = page(
+        "09_Diverse.html", "08", "Diverse", window_note, body)
 
     for fname, content in files.items():
         if only and fname[:2] not in only:

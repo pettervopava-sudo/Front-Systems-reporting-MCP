@@ -1425,7 +1425,7 @@ def _ppk_section(ry, months, title, periode_txt):
 
 
 def _beste_selger_section(ry, months, title, periode_txt, lo=100, hi=500,
-                          gender=None):
+                          gender=None, rank_by="ppk"):
     """Topp 20 selgere etter PPK innen transaksjonsvinduet [lo, hi];
     gender='dame'/'herre' teller kun linjer for det kj&oslash;nnet.
     Poselinjer og felles-/systembrukere er tatt ut."""
@@ -1456,28 +1456,34 @@ def _beste_selger_section(ry, months, title, periode_txt, lo=100, hi=500,
             a["cost"] += q * float(r["Cost"] or 0)
     cand = [(k, a) for k, a in per.items()
             if lo <= len(a["sales"]) <= (hi if hi else 10**9)]
-    cand.sort(key=lambda ka: -(ka[1]["qty"] / len(ka[1]["sales"])))
+    if rank_by == "kpk":
+        cand.sort(key=lambda ka: -(ka[1]["rev"] / len(ka[1]["sales"])))
+    else:
+        cand.sort(key=lambda ka: -(ka[1]["qty"] / len(ka[1]["sales"])))
     rows = ""
     for i, ((emp, st), a) in enumerate(cand[:20], start=1):
         t = len(a["sales"])
         netto = a["rev"] / 1.25
+        c_ppk = f"<td class='num r'>{a['qty'] / t:.2f}".replace(".", ",") + "</td>"
+        c_kpk = f"<td class='num r'>{nf(a['rev'] / t)}</td>"
+        mid = (f"<td class='num r'>{nf(t)}</td>"
+               f"<td class='num r'>{nf(a['qty'])}</td>"
+               f"<td class='num r'>{nf(a['rev'])}</td>"
+               f"<td class='num r'>{p1((netto - a['cost']) / netto * 100) if netto else '&ndash;'}</td>")
+        first, last = (c_kpk, c_ppk) if rank_by == "kpk" else (c_ppk, c_kpk)
         rows += (f"<tr><td class='num'>{i}</td><td>{esc(emp)}</td>"
                  f"<td>{esc(st.replace('Høyer ', ''))}</td>"
-                 f"<td class='num r'>{a['qty'] / t:.2f}".replace(".", ",") + "</td>"
-                 f"<td class='num r'>{nf(t)}</td>"
-                 f"<td class='num r'>{nf(a['qty'])}</td>"
-                 f"<td class='num r'>{nf(a['rev'])}</td>"
-                 f"<td class='num r'>{p1((netto - a['cost']) / netto * 100) if netto else '&ndash;'}</td>"
-                 f"<td class='num r'>{nf(a['rev'] / t)}</td></tr>")
+                 + first + mid + last + "</tr>")
     return f"""<section><div class="shead"><h2>{title}</h2>
-  <p>Topp 20 etter PPK, {periode_txt}{"" if gender else ", alle kj&oslash;nn"}. Kun selgere med
+  <p>Topp 20 etter {"KPK (omsetning pr transaksjon)" if rank_by == "kpk" else "PPK"}, {periode_txt}{"" if gender else ", alle kj&oslash;nn"}. Kun selgere med
      {"minst " + nf(lo) if not hi else nf(lo) + "&ndash;" + nf(hi)}
      transaksjoner; poselinjer og felles-/systembrukere er tatt ut.</p></div>
 <div class="tw"><table>
-  <thead><tr><th>#</th><th>Selger</th><th>Butikk</th><th class="r">PPK</th>
+  <thead><tr><th>#</th><th>Selger</th><th>Butikk</th>
+    <th class="r">{"Oms. pr trans" if rank_by == "kpk" else "PPK"}</th>
     <th class="r">Trans</th><th class="r">Antall produkter</th>
     <th class="r">Brutto omsetning</th><th class="r">BF %</th>
-    <th class="r">Oms. pr trans</th></tr></thead>
+    <th class="r">{"PPK" if rank_by == "kpk" else "Oms. pr trans"}</th></tr></thead>
   <tbody>{rows}</tbody></table></div></section>"""
 
 
@@ -1947,7 +1953,28 @@ const nfj=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
   <tbody>{drows(d_prev)}</tbody></table></div></section>
 <div class="note"><strong>St&oslash;rste kunder</strong> er bevisst utelatt:
   det krever kundeidentifikatorer, og rapportserien henter ikke kundedata.</div>"""
-    files["08_Diverse.html"] = page("08_Diverse.html", "08", "Diverse", window, body)
+    kpk_body = (
+        _beste_selger_section(
+            ry, [rm],
+            f"KPK beste selger (mellom 100 og 500 transaksjoner) &mdash; {esc(mnd)}",
+            f"{esc(mnd)} {ry}", rank_by="kpk")
+        + _beste_selger_section(
+            ry, range(1, rm + 1),
+            "KPK beste selger (mellom 100 og 500 transaksjoner) &mdash; YTD",
+            f"januar&ndash;{esc(mnd)} {ry}", rank_by="kpk")
+        + _beste_selger_section(
+            ry, range(1, rm + 1),
+            "KPK beste selger (minst 500 transaksjoner) &mdash; YTD",
+            f"januar&ndash;{esc(mnd)} {ry}", lo=500, hi=None, rank_by="kpk"))
+    kpk_body += """<div class="note"><strong>Avvik mot PPT-utgaven.</strong>
+  PPT-utgavens KPK-side merket juli viser i realiteten juni-tall
+  (verifisert: sidens rader matcher juni 2026 eksakt, f.eks. Ingrid /
+  Trondheim med 135 transaksjoner og 889&nbsp;568 kr). Tabellene her
+  viser faktisk juli. YTD-tabellene stemmer celle for celle.</div>"""
+    files["08_Selgere_KPK.html"] = page(
+        "08_Selgere_KPK.html", "08", "Selgere &mdash; KPK", window, kpk_body)
+
+    files["09_Diverse.html"] = page("09_Diverse.html", "09", "Diverse", window, body)
 
     import hoyer_nye_kpi as HK
     asyncio.run(HK.ensure_klines(
