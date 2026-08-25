@@ -107,12 +107,15 @@ def main() -> None:
                     help="also write the bound suite as one HTML file")
     ap.add_argument("--html-only", action="store_true",
                     help="only the combined HTML; no Chrome, no PDF")
+    ap.add_argument("--dir", default=None,
+                    help="read parts from this dir instead of reports/ "
+                         "(interim editions built outside the suite)")
     args = ap.parse_args()
     ry, rm = int(args.month[:4]), int(args.month[5:7])
     import monthly_report as MR
     mnd = MR.MND[rm - 1]
     LR.set_suite_month(ry, rm)
-    reports = ROOT / "reports"
+    reports = pathlib.Path(args.dir) if args.dir else ROOT / "reports"
     out = pathlib.Path(args.out or reports / f"Manedsrapport_{mnd}_{ry}.pdf")
 
     line_parts = [reports / f"{nn}.html" for nn in
