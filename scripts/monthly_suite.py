@@ -1334,27 +1334,28 @@ def _top5_brand_sections(ry, rm, mnd):
 BAG_RE = re.compile(r"^h[øo]yer .*pose", re.I)
 
 
-def _ppk_section(ry, rm, mnd):
+def _ppk_section(ry, months, title, periode_txt):
     """PPK pr butikk: six sortable lanes -- PPK, antall salg, brutto,
     antall varer, omsetning pr transaksjon, BF % -- sorted by PPK."""
     import json as _json
-    f = MR.CACHE / f"klines_{ry:04d}-{rm:02d}.json"
-    if not f.exists():
-        return ""
     per = {}
-    for r in _json.load(open(f)):
-        st = LR.STOCK_STORE.get(r["STOCKID_FK"])
-        if st is None:
-            continue
-        a = per.setdefault(st, {"sales": set(), "varer": 0.0,
-                                "rev": 0.0, "cost": 0.0})
-        q = float(r["Qty"] or 0)
-        a["rev"] += q * float(r["Price"] or 0)
-        a["cost"] += q * float(r["Cost"] or 0)
-        if BAG_RE.match((r.get("Name") or "").strip()):
-            continue
-        a["sales"].add(r["SALEID"])
-        a["varer"] += q
+    for m in months:
+        f = MR.CACHE / f"klines_{ry:04d}-{m:02d}.json"
+        if not f.exists():
+            return ""
+        for r in _json.load(open(f)):
+            st = LR.STOCK_STORE.get(r["STOCKID_FK"])
+            if st is None:
+                continue
+            a = per.setdefault(st, {"sales": set(), "varer": 0.0,
+                                    "rev": 0.0, "cost": 0.0})
+            q = float(r["Qty"] or 0)
+            a["rev"] += q * float(r["Price"] or 0)
+            a["cost"] += q * float(r["Cost"] or 0)
+            if BAG_RE.match((r.get("Name") or "").strip()):
+                continue
+            a["sales"].add(r["SALEID"])
+            a["varer"] += q
     def ppk(a):
         return a["varer"] / len(a["sales"]) if a["sales"] else None
     def bfp(a):
@@ -1383,7 +1384,7 @@ def _ppk_section(ry, rm, mnd):
     n_rows = len(names)
     H = TOP + n_rows * RH + 26
     out = [f'<svg class="sbf" viewBox="0 0 {W} {H}" role="img" '
-           f'aria-label="PPK pr butikk, {esc(mnd)} {ry}">', '<g class="axis">']
+           f'aria-label="{title}">', '<g class="axis">']
     for gi, (t, _g, _l, _a) in enumerate(lanes):
         gx = L + gi * GW
         out.append(f'<text x="{gx + LW / 2:.1f}" y="{TOP - 12}" '
@@ -1408,16 +1409,16 @@ def _ppk_section(ry, rm, mnd):
                 continue
             w = LW * v / maxes[gi] if v > 0 else 0
             out.append(f'<g class="pt" tabindex="0" role="img" '
-                       f'aria-label="{esc(n)} {esc(mnd)} {ry}: {t} {lab(v)}">'
+                       f'aria-label="{esc(n)} {periode_txt}: {t} {lab(v)}">'
                        f'<rect x="{gx:.1f}" y="4" width="{max(w, 1):.1f}" '
                        f'height="{RH - 8}" fill="var(--slate)"/>'
                        f'<text class="vl" x="{gx + max(w, 1) + 4:.1f}" '
                        f'y="{RH - 6:.1f}">{lab(v)}</text></g>')
         out.append('</g>')
     out.append("</svg>")
-    return f"""<section><div class="shead"><h2>PPK pr butikk &mdash; {esc(mnd)}</h2>
+    return f"""<section><div class="shead"><h2>{title}</h2>
   <p>Plagg pr kunde = netto antall varer (b&aelig;reposer tatt ut) delt
-     p&aring; antall kvitteringer, {esc(mnd)} {ry}, alle kj&oslash;nn.
+     p&aring; antall kvitteringer, {periode_txt}, alle kj&oslash;nn.
      Sortert etter PPK. PPT-utgaven teller nettordre og rene returer noe
      annerledes; avvik under &plusmn;0,03 i PPK.</p></div>
 <div class="plot">{"".join(out)}</div></section>"""
@@ -1429,7 +1430,11 @@ def inject_ppk(ry, rm, mnd, outdir):
     if not f.exists():
         return
     html = f.read_text(encoding="ascii")
-    block = _ppk_section(ry, rm, mnd)
+    block = (_ppk_section(ry, [rm], f"PPK pr butikk &mdash; {esc(mnd)}",
+                          f"{esc(mnd)} {ry}")
+             + _ppk_section(ry, range(1, rm + 1),
+                            "PPK pr butikk &mdash; YTD",
+                            f"januar&ndash;{esc(mnd)} {ry}"))
     if not block:
         return
     start = "<!-- PPK START -->"
