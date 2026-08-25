@@ -1424,6 +1424,56 @@ def _ppk_section(ry, months, title, periode_txt):
 <div class="plot">{"".join(out)}</div></section>"""
 
 
+def _beste_selger_section(ry, months, title, periode_txt):
+    """Topp 20 selgere etter PPK blant dem med 100-500 transaksjoner i
+    perioden. Poselinjer og felles-/systembrukere er tatt ut."""
+    import json as _json
+    from hoyer_nye_kpi import is_felles
+    per = {}
+    for m in months:
+        f = MR.CACHE / f"klines_{ry:04d}-{m:02d}.json"
+        if not f.exists():
+            return ""
+        for r in _json.load(open(f)):
+            st = LR.STOCK_STORE.get(r["STOCKID_FK"])
+            emp = (r.get("Employee") or "").strip()
+            if st is None or not emp or is_felles(emp):
+                continue
+            if BAG_RE.match((r.get("Name") or "").strip()):
+                continue
+            a = per.setdefault((emp, st), {"sales": set(), "qty": 0.0,
+                                           "rev": 0.0, "cost": 0.0})
+            q = float(r["Qty"] or 0)
+            a["sales"].add(r["SALEID"])
+            a["qty"] += q
+            a["rev"] += q * float(r["Price"] or 0)
+            a["cost"] += q * float(r["Cost"] or 0)
+    cand = [(k, a) for k, a in per.items() if 100 <= len(a["sales"]) <= 500]
+    cand.sort(key=lambda ka: -(ka[1]["qty"] / len(ka[1]["sales"])))
+    rows = ""
+    for i, ((emp, st), a) in enumerate(cand[:20], start=1):
+        t = len(a["sales"])
+        netto = a["rev"] / 1.25
+        rows += (f"<tr><td class='num'>{i}</td><td>{esc(emp)}</td>"
+                 f"<td>{esc(st.replace('Høyer ', ''))}</td>"
+                 f"<td class='num r'>{a['qty'] / t:.2f}".replace(".", ",") + "</td>"
+                 f"<td class='num r'>{nf(t)}</td>"
+                 f"<td class='num r'>{nf(a['qty'])}</td>"
+                 f"<td class='num r'>{nf(a['rev'])}</td>"
+                 f"<td class='num r'>{p1((netto - a['cost']) / netto * 100) if netto else '&ndash;'}</td>"
+                 f"<td class='num r'>{nf(a['rev'] / t)}</td></tr>")
+    return f"""<section><div class="shead"><h2>{title}</h2>
+  <p>Topp 20 etter PPK, {periode_txt}, alle kj&oslash;nn. Kun selgere med
+     100&ndash;500 transaksjoner; poselinjer og felles-/systembrukere er
+     tatt ut.</p></div>
+<div class="tw"><table>
+  <thead><tr><th>#</th><th>Selger</th><th>Butikk</th><th class="r">PPK</th>
+    <th class="r">Trans</th><th class="r">Antall produkter</th>
+    <th class="r">Brutto omsetning</th><th class="r">BF %</th>
+    <th class="r">Oms. pr trans</th></tr></thead>
+  <tbody>{rows}</tbody></table></div></section>"""
+
+
 def inject_ppk(ry, rm, mnd, outdir):
     """PPK chart as the FIRST section of report 07."""
     f = pathlib.Path(outdir) / "07_Selgere.html"
@@ -1434,7 +1484,15 @@ def inject_ppk(ry, rm, mnd, outdir):
                           f"{esc(mnd)} {ry}")
              + _ppk_section(ry, range(1, rm + 1),
                             "PPK pr butikk &mdash; YTD",
-                            f"januar&ndash;{esc(mnd)} {ry}"))
+                            f"januar&ndash;{esc(mnd)} {ry}")
+             + _beste_selger_section(
+                 ry, [rm],
+                 f"Beste selger (mellom 100 og 500 transaksjoner) &mdash; {esc(mnd)}",
+                 f"{esc(mnd)} {ry}")
+             + _beste_selger_section(
+                 ry, range(1, rm + 1),
+                 "Beste selger (mellom 100 og 500 transaksjoner) &mdash; YTD",
+                 f"januar&ndash;{esc(mnd)} {ry}"))
     if not block:
         return
     start = "<!-- PPK START -->"
