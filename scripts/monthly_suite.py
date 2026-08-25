@@ -1424,9 +1424,9 @@ def _ppk_section(ry, months, title, periode_txt):
 <div class="plot">{"".join(out)}</div></section>"""
 
 
-def _beste_selger_section(ry, months, title, periode_txt):
-    """Topp 20 selgere etter PPK blant dem med 100-500 transaksjoner i
-    perioden. Poselinjer og felles-/systembrukere er tatt ut."""
+def _beste_selger_section(ry, months, title, periode_txt, lo=100, hi=500):
+    """Topp 20 selgere etter PPK innen transaksjonsvinduet [lo, hi].
+    Poselinjer og felles-/systembrukere er tatt ut."""
     import json as _json
     from hoyer_nye_kpi import is_felles
     per = {}
@@ -1448,7 +1448,8 @@ def _beste_selger_section(ry, months, title, periode_txt):
             a["qty"] += q
             a["rev"] += q * float(r["Price"] or 0)
             a["cost"] += q * float(r["Cost"] or 0)
-    cand = [(k, a) for k, a in per.items() if 100 <= len(a["sales"]) <= 500]
+    cand = [(k, a) for k, a in per.items()
+            if lo <= len(a["sales"]) <= (hi if hi else 10**9)]
     cand.sort(key=lambda ka: -(ka[1]["qty"] / len(ka[1]["sales"])))
     rows = ""
     for i, ((emp, st), a) in enumerate(cand[:20], start=1):
@@ -1464,8 +1465,8 @@ def _beste_selger_section(ry, months, title, periode_txt):
                  f"<td class='num r'>{nf(a['rev'] / t)}</td></tr>")
     return f"""<section><div class="shead"><h2>{title}</h2>
   <p>Topp 20 etter PPK, {periode_txt}, alle kj&oslash;nn. Kun selgere med
-     100&ndash;500 transaksjoner; poselinjer og felles-/systembrukere er
-     tatt ut.</p></div>
+     {"minst " + nf(lo) if not hi else nf(lo) + "&ndash;" + nf(hi)}
+     transaksjoner; poselinjer og felles-/systembrukere er tatt ut.</p></div>
 <div class="tw"><table>
   <thead><tr><th>#</th><th>Selger</th><th>Butikk</th><th class="r">PPK</th>
     <th class="r">Trans</th><th class="r">Antall produkter</th>
@@ -1492,7 +1493,11 @@ def inject_ppk(ry, rm, mnd, outdir):
              + _beste_selger_section(
                  ry, range(1, rm + 1),
                  "Beste selger (mellom 100 og 500 transaksjoner) &mdash; YTD",
-                 f"januar&ndash;{esc(mnd)} {ry}"))
+                 f"januar&ndash;{esc(mnd)} {ry}")
+             + _beste_selger_section(
+                 ry, range(1, rm + 1),
+                 "Beste selger (minst 500 transaksjoner) &mdash; YTD",
+                 f"januar&ndash;{esc(mnd)} {ry}", lo=500, hi=None))
     if not block:
         return
     start = "<!-- PPK START -->"
