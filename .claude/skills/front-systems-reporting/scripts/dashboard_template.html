@@ -1,0 +1,349 @@
+<title>__STORE__ &mdash; Sales __PERIOD__</title>
+<style>
+  :root{
+    --ground:#FBFAF8; --panel:#FFFFFF; --ink:#211E1A; --ink-2:#4A443B; --muted:#6E6659;
+    --rule:#E4DFD6; --rule-2:#EFEBE3;
+    --copper:#C2701A; --copper-soft:rgba(194,112,26,.13);
+    --blue:#1D6FBF; --blue-soft:rgba(29,111,191,.13);
+    --neg:#A33A2B; --pos:#3E7A4E;
+    --font-display:"Helvetica Neue",Helvetica,"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --maxw:1080px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#17150F; --panel:#1F1C15; --ink:#F3EFE6; --ink-2:#CFC7B8; --muted:#9B948A;
+      --rule:#332E24; --rule-2:#282318;
+      --copper:#D07E22; --copper-soft:rgba(208,126,34,.18);
+      --blue:#3B82D9; --blue-soft:rgba(59,130,217,.18);
+      --neg:#D2705E; --pos:#6FA97C;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#17150F; --panel:#1F1C15; --ink:#F3EFE6; --ink-2:#CFC7B8; --muted:#9B948A;
+    --rule:#332E24; --rule-2:#282318;
+    --copper:#D07E22; --copper-soft:rgba(208,126,34,.18);
+    --blue:#3B82D9; --blue-soft:rgba(59,130,217,.18);
+    --neg:#D2705E; --pos:#6FA97C;
+  }
+  :root[data-theme="light"]{
+    --ground:#FBFAF8; --panel:#FFFFFF; --ink:#211E1A; --ink-2:#4A443B; --muted:#6E6659;
+    --rule:#E4DFD6; --rule-2:#EFEBE3;
+    --copper:#C2701A; --copper-soft:rgba(194,112,26,.13);
+    --blue:#1D6FBF; --blue-soft:rgba(29,111,191,.13);
+    --neg:#A33A2B; --pos:#3E7A4E;
+  }
+
+  body{background:var(--ground);color:var(--ink);font-family:var(--font-display);
+       line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:48px 24px 80px;
+        display:flex;flex-direction:column;gap:40px;}
+  @media (max-width:640px){ .wrap{padding:28px 16px 56px;gap:30px;} }
+
+  .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+           font-weight:600;}
+  h1{font-size:clamp(30px,5.2vw,46px);line-height:1.04;letter-spacing:-.028em;font-weight:700;
+     margin:10px 0 0;text-wrap:balance;}
+  h2{font-size:15px;letter-spacing:-.008em;font-weight:700;margin:0;}
+  .sub{color:var(--ink-2);font-size:15px;max-width:62ch;margin:12px 0 0;}
+  .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+
+  /* masthead rule in copper &mdash; the one flourish */
+  .mast{border-bottom:2px solid var(--copper);padding-bottom:22px;}
+
+  .coverage{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--rule);
+            border-radius:3px;overflow:hidden;background:var(--panel);}
+  .coverage div{flex:1 1 190px;padding:13px 16px;border-right:1px solid var(--rule-2);}
+  .coverage div:last-child{border-right:0;}
+  .coverage dt{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+               font-weight:600;margin:0 0 3px;}
+  .coverage dd{margin:0;font-size:13.5px;color:var(--ink-2);}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;
+        background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;}
+  .kpi{background:var(--panel);padding:16px 18px 18px;display:flex;flex-direction:column;gap:5px;}
+  .kpi .label{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+              font-weight:600;}
+  .kpi .value{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+              font-size:clamp(20px,2.6vw,26px);font-weight:600;letter-spacing:-.02em;line-height:1.1;}
+  .kpi .foot{font-size:12px;color:var(--muted);}
+  .kpi.lead .value{color:var(--copper);}
+
+  section{display:flex;flex-direction:column;gap:14px;}
+  .head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
+        border-bottom:1px solid var(--rule);padding-bottom:9px;}
+  .head p{margin:0;font-size:12.5px;color:var(--muted);max-width:52ch;}
+
+  .legend{display:flex;gap:16px;align-items:center;font-size:12px;color:var(--ink-2);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:11px;height:11px;border-radius:2px;display:inline-block;}
+
+  .plot{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:18px 16px 10px;
+        overflow-x:auto;}
+  svg{display:block;max-width:100%;height:auto;}
+  .grid line{stroke:var(--rule-2);stroke-width:1;}
+  .axis text{font-family:var(--font-mono);font-size:10.5px;fill:var(--muted);}
+  .bar{cursor:pointer;}
+  .bar:focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
+  .closed rect{fill:var(--rule-2);}
+  .closed text{font-size:9.5px;fill:var(--muted);letter-spacing:.06em;}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+  @media (max-width:760px){ .two{grid-template-columns:1fr;} }
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+     font-weight:600;padding:0 10px 7px 0;border-bottom:1px solid var(--rule);}
+  th.r,td.r{text-align:right;padding-right:0;}
+  td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule-2);}
+  td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+  .tw{overflow-x:auto;}
+  .track{position:relative;height:7px;background:var(--rule-2);border-radius:2px;min-width:60px;}
+  .fill{position:absolute;inset:0 auto 0 0;background:var(--copper);border-radius:2px;}
+
+  .note{background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--copper);
+        border-radius:3px;padding:16px 18px;font-size:13.5px;color:var(--ink-2);}
+  .note strong{color:var(--ink);}
+  .note ul{margin:9px 0 0;padding-left:19px;display:flex;flex-direction:column;gap:5px;}
+
+  footer{border-top:1px solid var(--rule);padding-top:18px;font-size:12.5px;color:var(--muted);
+         display:flex;flex-direction:column;gap:7px;}
+  code{font-family:var(--font-mono);font-size:.93em;background:var(--copper-soft);
+       padding:1px 5px;border-radius:2px;color:var(--ink);}
+
+  #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;z-index:50;
+       background:var(--ink);color:var(--ground);padding:8px 11px;border-radius:3px;font-size:12px;
+       font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:pre;
+       box-shadow:0 4px 14px rgba(0,0,0,.22);}
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important;} }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">Front Systems &middot; sales report</div>
+    <h1>__STORE__</h1>
+    <p class="sub">Line-level sales for __PERIOD__, read directly from the POS.
+       Every figure below is <code>Qty &times; Price</code>, so returns subtract
+       rather than add.</p>
+  </header>
+
+  <dl class="coverage">
+    <div><dt>Period covered</dt><dd>__PERIOD__</dd></div>
+    <div><dt>Trading days</dt><dd>__TRADED__ &mdash; closed: __CLOSED__</dd></div>
+    <div><dt>Rows</dt><dd>__LINES__ sale lines &middot; __CURRENCY__</dd></div>
+    <div><dt>Reconciliation</dt><dd>Matches transaction totals exactly</dd></div>
+  </dl>
+
+  <div class="kpis">
+    <div class="kpi lead"><span class="label">Net revenue</span>
+      <span class="value">__REVENUE__</span><span class="foot">NOK, after returns</span></div>
+    <div class="kpi"><span class="label">Gross margin</span>
+      <span class="value">__MARGIN__</span><span class="foot">__MARGINPCT__% of revenue</span></div>
+    <div class="kpi"><span class="label">Transactions</span>
+      <span class="value">__TXNS__</span><span class="foot">__PERDAY__ per trading day</span></div>
+    <div class="kpi"><span class="label">Average basket</span>
+      <span class="value">__BASKET__</span><span class="foot">__PERBASKET__ items per sale</span></div>
+    <div class="kpi"><span class="label">Units sold</span>
+      <span class="value">__UNITS__</span><span class="foot">__UNITPRICE__ average unit price</span></div>
+    <div class="kpi"><span class="label">Brands sold</span>
+      <span class="value">__BRANDS__</span><span class="foot">brands sold in period</span></div>
+  </div>
+
+  <section>
+    <div class="head">
+      <h2>Revenue by day</h2>
+      <p>Each bar splits into the margin kept and the cost of the goods sold. Sundays are
+         marked closed rather than drawn as zero.</p>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--copper)"></i>Gross margin</span>
+      <span><i class="swatch" style="background:var(--blue)"></i>Cost of goods</span>
+    </div>
+    <div class="plot"><svg id="daily" viewBox="0 0 980 300" role="img"
+      aria-label="Daily revenue 1 to 10 August, split into gross margin and cost of goods. Peak Saturday 8 August at 320,313 NOK."></svg></div>
+  </section>
+
+  <div class="two">
+    <section>
+      <div class="head"><h2>Revenue by hour</h2></div>
+      <div class="plot"><svg id="hourly" viewBox="0 0 470 260" role="img"
+        aria-label="Revenue by hour of day, peaking at 16:00 with 298,251 NOK."></svg></div>
+      <p class="head" style="border:0;padding:0;"><span></span></p>
+    </section>
+    <section>
+      <div class="head"><h2>Average day by weekday</h2></div>
+      <div class="plot"><svg id="weekday" viewBox="0 0 470 260" role="img"
+        aria-label="Average revenue per trading day by weekday. Saturday highest at 285,660 NOK."></svg></div>
+    </section>
+  </div>
+
+  <div class="note">
+    <strong>Why weekday is shown as an average.</strong>
+    A period rarely contains the same number of each weekday. Plotting raw totals would make
+    whichever weekday occurs twice look twice as strong, so each bar is revenue per trading
+    day. Weekdays with no trading days are omitted rather than drawn as zero.
+  </div>
+
+  <section>
+    <div class="head">
+      <h2>Top brands</h2>
+      <p>Margin varies far more across brands than revenue does.</p>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Brand</th><th style="width:34%">Share of revenue</th>
+        <th class="r">Revenue</th><th class="r">Units</th><th class="r">Margin</th></tr></thead>
+      <tbody id="brands">__ROWS_BRAND__</tbody>
+    </table></div>
+  </section>
+
+  <div class="two">
+    <section>
+      <div class="head"><h2>Categories</h2></div>
+      <div class="tw"><table>
+        <thead><tr><th>Category</th><th class="r">Revenue</th><th class="r">Units</th></tr></thead>
+        <tbody id="cats">__ROWS_CAT__</tbody>
+      </table></div>
+    </section>
+    <section>
+      <div class="head"><h2>Tills</h2>
+        <p>Four registers, one shop.</p></div>
+      <div class="tw"><table>
+        <thead><tr><th>Register</th><th class="r">Revenue</th><th class="r">Sales</th><th class="r">Basket</th></tr></thead>
+        <tbody id="regs">__ROWS_REG__</tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <section>
+    <div class="head"><h2>Returns and discounting</h2></div>
+    <div class="kpis">
+      <div class="kpi"><span class="label">Returns</span>
+        <span class="value" style="color:var(--neg)">__RETVALUE__</span>
+        <span class="foot">__RETLINES__ lines &middot; __RETPCT__% of gross</span></div>
+      <div class="kpi"><span class="label">Gross before returns</span>
+        <span class="value">__GROSS__</span><span class="foot">before returns</span></div>
+      <div class="kpi"><span class="label">Discount given</span>
+        <span class="value">__DISCVALUE__</span><span class="foot">__DISCLINES__ of __LINES__ lines</span></div>
+      <div class="kpi"><span class="label">Off list price</span>
+        <span class="value">__DISCPCT__%</span><span class="foot">__LISTVALUE__ at full price</span></div>
+    </div>
+    <div class="note">
+      <strong>Discounting.</strong>
+      __DISCLINES__ of __LINES__ lines carried a discount, taking __DISCVALUE__ NOK off list
+      price &mdash; __DISCPCT__% of ticket value. <code>Price</code> is already net of this,
+      so it is invisible in revenue alone; it is usually the largest single lever in a
+      period and worth checking against the campaign plan.
+    </div>
+  </section>
+
+  <footer>
+    <div><strong style="color:var(--ink-2)">Method.</strong>
+      Revenue is <code>SUM(Qty &times; Price)</code> over sale lines, where <code>Price</code> is a
+      unit price and returns carry <code>Qty = &minus;1</code>. Margin is
+      <code>SUM(Qty &times; (Price &minus; Cost))</code>. Figures reconcile exactly against transaction
+      totals for the same period and tills.</div>
+    <div><strong style="color:var(--ink-2)">Coverage.</strong>
+      <ul>__WARNINGS__</ul></div>
+    <div>__STORE__ &mdash; generated __GENERATED__.</div>
+  </footer>
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+const DAILY=__DAILY__;
+const HOURLY=__HOURLY__;
+const WEEK=__WEEK__;
+
+const nf=n=>Math.round(n).toLocaleString("en-US").replace(/,/g," ");
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a={})=>{const e=document.createElementNS(NS,t);
+  for(const k in a)e.setAttribute(k,a[k]);return e;};
+const tip=document.getElementById("tip");
+function bind(node,text){
+  const show=ev=>{tip.textContent=text;tip.style.opacity="1";
+    const x=(ev.touches?ev.touches[0].clientX:ev.clientX),
+          y=(ev.touches?ev.touches[0].clientY:ev.clientY);
+    tip.style.left=Math.min(x+14,innerWidth-tip.offsetWidth-10)+"px";
+    tip.style.top=Math.max(y-tip.offsetHeight-12,8)+"px";};
+  node.addEventListener("mousemove",show);
+  node.addEventListener("mouseenter",show);
+  node.addEventListener("focus",e=>{const r=node.getBoundingClientRect();
+    show({clientX:r.left+r.width/2,clientY:r.top});});
+  const hide=()=>tip.style.opacity="0";
+  node.addEventListener("mouseleave",hide);node.addEventListener("blur",hide);
+  node.setAttribute("tabindex","0");node.setAttribute("role","img");
+  node.setAttribute("aria-label",text.replace(/\n/g,". "));
+}
+function yAxis(svg,W,H,P,max,ticks=4){
+  const g=el("g",{class:"grid"});
+  const a=el("g",{class:"axis"});
+  for(let i=0;i<=ticks;i++){
+    const v=max*i/ticks, y=H-P.b-(H-P.t-P.b)*(i/ticks);
+    g.appendChild(el("line",{x1:P.l,x2:W-P.r,y1:y,y2:y}));
+    const tx=el("text",{x:P.l-9,y:y+3.5,"text-anchor":"end"});
+    tx.textContent=v>=1000?Math.round(v/1000)+"k":Math.round(v);
+    a.appendChild(tx);
+  }
+  svg.appendChild(g);svg.appendChild(a);
+}
+
+/* Daily \u2014 stacked margin + cost, both NOK on one axis */
+(function(){
+  const svg=document.getElementById("daily"),W=980,H=300,P={l:52,r:14,t:16,b:46};
+  const max=__MAXDAILY__, iw=W-P.l-P.r, bw=iw/DAILY.length, w=Math.min(58,bw-14);
+  yAxis(svg,W,H,P,max);
+  const ax=el("g",{class:"axis"});
+  DAILY.forEach((d,i)=>{
+    const cx=P.l+bw*i+bw/2, base=H-P.b, ih=H-P.t-P.b;
+    const lab=el("text",{x:cx,y:H-P.b+18,"text-anchor":"middle"});
+    lab.textContent=d.d.slice(8);ax.appendChild(lab);
+    if(d.closed){
+      const g=el("g",{class:"closed"});
+      g.appendChild(el("rect",{x:cx-w/2,y:base-26,width:w,height:26,rx:3}));
+      const t=el("text",{x:cx,y:base-10,"text-anchor":"middle"});
+      t.textContent="closed";g.appendChild(t);svg.appendChild(g);
+      bind(g,d.d+"\nSunday \u2014 shop closed");
+      return;
+    }
+    const hM=ih*d.m/max, hC=ih*(d.r-d.m)/max;
+    const g=el("g",{class:"bar"});
+    /* 2px surface gap between the two segments */
+    g.appendChild(el("rect",{x:cx-w/2,y:base-hM,width:w,height:hM,rx:3,fill:"var(--copper)"}));
+    g.appendChild(el("rect",{x:cx-w/2,y:base-hM-hC,width:w,height:Math.max(hC-2,1),rx:3,
+      fill:"var(--blue)"}));
+    const v=el("text",{x:cx,y:base-hM-hC-9,"text-anchor":"middle",class:"num",
+      "font-size":"10.5","fill":"var(--ink-2)","font-family":"var(--font-mono)"});
+    v.textContent=Math.round(d.r/1000)+"k";g.appendChild(v);
+    svg.appendChild(g);
+    bind(g,`${d.d}\nrevenue  ${nf(d.r)} NOK\nmargin   ${nf(d.m)} (${(d.m/d.r*100).toFixed(1)}%)\n`+
+      `cost     ${nf(d.r-d.m)}\nsales    ${d.t}   units ${d.u}`);
+  });
+  svg.appendChild(ax);
+})();
+
+function simpleBars(id,data,W,H,fmtLabel,fmtTip,max){
+  const svg=document.getElementById(id),P={l:46,r:10,t:14,b:38};
+  const iw=W-P.l-P.r,bw=iw/data.length,w=Math.min(30,bw-9);
+  yAxis(svg,W,H,P,max,3);
+  const ax=el("g",{class:"axis"});
+  data.forEach((d,i)=>{
+    const cx=P.l+bw*i+bw/2,base=H-P.b,h=(H-P.t-P.b)*d.v/max;
+    const g=el("g",{class:"bar"});
+    g.appendChild(el("rect",{x:cx-w/2,y:base-h,width:w,height:Math.max(h,1),rx:3,
+      fill:"var(--copper)"}));
+    svg.appendChild(g);bind(g,fmtTip(d));
+    const t=el("text",{x:cx,y:H-P.b+16,"text-anchor":"middle"});
+    t.textContent=fmtLabel(d);ax.appendChild(t);
+  });
+  svg.appendChild(ax);
+}
+simpleBars("hourly",HOURLY,470,260,
+  d=>d.k, d=>`${String(d.k).padStart(2,"0")}:00\u2013${String(d.k+1).padStart(2,"0")}:00\n`+
+  `revenue ${nf(d.v)} NOK\nsales   ${d.t}`, __MAXHOUR__);
+simpleBars("weekday",WEEK,470,260,
+  d=>d.k, d=>`${d.k}\nper trading day ${nf(d.v)} NOK\n${d.n} ${d.n>1?"days":"day"} in period`,
+  __MAXWEEK__);
+
+</script>
