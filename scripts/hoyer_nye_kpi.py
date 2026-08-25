@@ -42,7 +42,7 @@ VAT = 1.25
 KSEL = ["SALEID", "SID", "STOCKID_FK", "Qty", "Price", "Cost", "Brand",
         "Group", "Season", "Name", "EAN", "Employee", "SaleDate",
         "SaleDateTime", "OrderLineReasons", "Stock", "Discount", "FullPrice",
-        "IsEmployee"]
+        "IsEmployee", "Gender"]
 #: kjente felles-/systembrukere; i tillegg flagges brukernavn som inneholder
 #: et butikknavn (Arendal, Storo, "Paleet Man" ...) som fellesbrukere.
 FELLES = {"webshop", "shopify integrasjon", "shopify", "integrasjon",

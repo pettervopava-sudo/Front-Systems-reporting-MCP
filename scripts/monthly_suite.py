@@ -1424,8 +1424,10 @@ def _ppk_section(ry, months, title, periode_txt):
 <div class="plot">{"".join(out)}</div></section>"""
 
 
-def _beste_selger_section(ry, months, title, periode_txt, lo=100, hi=500):
-    """Topp 20 selgere etter PPK innen transaksjonsvinduet [lo, hi].
+def _beste_selger_section(ry, months, title, periode_txt, lo=100, hi=500,
+                          gender=None):
+    """Topp 20 selgere etter PPK innen transaksjonsvinduet [lo, hi];
+    gender='dame'/'herre' teller kun linjer for det kj&oslash;nnet.
     Poselinjer og felles-/systembrukere er tatt ut."""
     import json as _json
     from hoyer_nye_kpi import is_felles
@@ -1440,6 +1442,10 @@ def _beste_selger_section(ry, months, title, periode_txt, lo=100, hi=500):
             if st is None or not emp or is_felles(emp):
                 continue
             if BAG_RE.match((r.get("Name") or "").strip()):
+                continue
+            # kassens kjoennskoder: f=dame, m=herre, "m,f"=unisex (utenfor begge)
+            if gender and (r.get("Gender") or "").strip().lower() != \
+                    {"dame": "f", "herre": "m"}[gender]:
                 continue
             a = per.setdefault((emp, st), {"sales": set(), "qty": 0.0,
                                            "rev": 0.0, "cost": 0.0})
@@ -1464,7 +1470,7 @@ def _beste_selger_section(ry, months, title, periode_txt, lo=100, hi=500):
                  f"<td class='num r'>{p1((netto - a['cost']) / netto * 100) if netto else '&ndash;'}</td>"
                  f"<td class='num r'>{nf(a['rev'] / t)}</td></tr>")
     return f"""<section><div class="shead"><h2>{title}</h2>
-  <p>Topp 20 etter PPK, {periode_txt}, alle kj&oslash;nn. Kun selgere med
+  <p>Topp 20 etter PPK, {periode_txt}{"" if gender else ", alle kj&oslash;nn"}. Kun selgere med
      {"minst " + nf(lo) if not hi else nf(lo) + "&ndash;" + nf(hi)}
      transaksjoner; poselinjer og felles-/systembrukere er tatt ut.</p></div>
 <div class="tw"><table>
@@ -1497,7 +1503,25 @@ def inject_ppk(ry, rm, mnd, outdir):
              + _beste_selger_section(
                  ry, range(1, rm + 1),
                  "Beste selger (minst 500 transaksjoner) &mdash; YTD",
-                 f"januar&ndash;{esc(mnd)} {ry}", lo=500, hi=None))
+                 f"januar&ndash;{esc(mnd)} {ry}", lo=500, hi=None)
+             + _beste_selger_section(
+                 ry, [rm],
+                 f"Beste selger dame (minst 100 transaksjoner) &mdash; {esc(mnd)}",
+                 f"dameplagg, {esc(mnd)} {ry}", lo=100, hi=None, gender="dame")
+             + _beste_selger_section(
+                 ry, range(1, rm + 1),
+                 "Beste selger dame (minst 100 transaksjoner) &mdash; YTD",
+                 f"dameplagg, januar&ndash;{esc(mnd)} {ry}", lo=100, hi=None,
+                 gender="dame")
+             + _beste_selger_section(
+                 ry, [rm],
+                 f"Beste selger herre (minst 100 transaksjoner) &mdash; {esc(mnd)}",
+                 f"herreplagg, {esc(mnd)} {ry}", lo=100, hi=None, gender="herre")
+             + _beste_selger_section(
+                 ry, range(1, rm + 1),
+                 "Beste selger herre (minst 100 transaksjoner) &mdash; YTD",
+                 f"herreplagg, januar&ndash;{esc(mnd)} {ry}", lo=100, hi=None,
+                 gender="herre"))
     if not block:
         return
     start = "<!-- PPK START -->"
