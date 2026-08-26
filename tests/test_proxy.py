@@ -3,9 +3,11 @@
 Ingen av disse testene rører nettverket. Der en ekte HTTP-rundtur trengs,
 kjøres en fake oppstrøm på loopback i samme prosess.
 """
+import json
+
 import pytest
 
-from front_systems_mcp.proxy import ALLOWED_ENTITIES, classify
+from front_systems_mcp.proxy import ALLOWED_ENTITIES, CUSTOMER_FIELDS, classify, strip_pii
 
 
 def test_get_on_allowed_entity_is_forwarded():
@@ -44,3 +46,54 @@ def test_healthz_still_rejects_write_methods():
 def test_every_known_entity_is_allowed():
     for entity in ALLOWED_ENTITIES:
         assert classify("GET", f"/odata/{entity}").kind == "forward"
+
+
+def test_customer_fields_are_removed_from_rows():
+    body = json.dumps({"value": [{
+        "SALEID": 1, "Qty": 2, "Price": 199.0,
+        "FirstName": "Kari", "LastName": "Nordmann",
+        "Email": "kari@example.com", "Phone": "99887766",
+        "CUSTOMERID_FK": 4711,
+    }]}).encode()
+    out = json.loads(strip_pii(body))
+    row = out["value"][0]
+    assert row == {"SALEID": 1, "Qty": 2, "Price": 199.0}
+
+
+def test_reporting_fields_survive():
+    body = json.dumps({"value": [{
+        "Qty": 1, "IsEmployee": True, "Gender": "f",
+        "Stock": "Høyer Bergen", "Email": "x@y.no",
+    }]}).encode()
+    row = json.loads(strip_pii(body))["value"][0]
+    assert row["IsEmployee"] is True
+    assert row["Gender"] == "f"
+    assert row["Stock"] == "Høyer Bergen"
+    assert "Email" not in row
+
+
+def test_norwegian_characters_survive_reserialisation():
+    body = json.dumps({"value": [{"Stock": "Høyer Sjølyst", "Email": "a@b.no"}]},
+                      ensure_ascii=False).encode("utf-8")
+    out = strip_pii(body)
+    assert "Høyer Sjølyst" in out.decode("utf-8")
+
+
+def test_bare_list_payload_is_handled():
+    body = json.dumps([{"SALEID": 1, "Email": "a@b.no"}]).encode()
+    assert json.loads(strip_pii(body)) == [{"SALEID": 1}]
+
+
+def test_non_json_body_passes_through_untouched():
+    body = b"<html>gateway error</html>"
+    assert strip_pii(body) == body
+
+
+def test_empty_value_list_passes_through():
+    body = json.dumps({"value": []}).encode()
+    assert json.loads(strip_pii(body)) == {"value": []}
+
+
+def test_customer_fields_cover_the_odata_denylist():
+    from front_systems_mcp.odata import PII_FIELDS
+    assert PII_FIELDS <= CUSTOMER_FIELDS
