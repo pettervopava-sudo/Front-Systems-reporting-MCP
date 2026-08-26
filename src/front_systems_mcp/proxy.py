@@ -69,9 +69,9 @@ def classify(method: str, path: str) -> Decision:
 #: IsEmployee beholdes bevisst — rabatt- og selgerrapportene bruker det til
 #: å skille ut ansattekjøp.
 CUSTOMER_FIELDS = frozenset(PII_FIELDS) | frozenset({
-    "CustomerGender", "CompanyName", "OrgNum", "IsCompany", "CountryCode",
-    "AgreedSendEmail", "AgreedSendSMS", "BonusBalance", "BonusFactor",
-    "BonusTotal", "SaleBonusFactor",
+    "COMPANYID_FK", "AgreedSendEmail", "AgreedSendSMS", "BonusBalance",
+    "BonusFactor", "BonusTotal", "CompanyName", "CountryCode", "CustomerGender",
+    "IsCompany", "OrgNum", "SaleBonusFactor",
 })
 
 #: Kun Saleslines bærer kundefelter; andre entiteter strømmes uparsede.

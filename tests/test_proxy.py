@@ -94,6 +94,15 @@ def test_empty_value_list_passes_through():
     assert json.loads(strip_pii(body)) == {"value": []}
 
 
+def test_company_identifier_is_stripped_too():
+    """COMPANYID_FK identifies the B2B customer just as CUSTOMERID_FK does."""
+    body = json.dumps({"value": [{
+        "SALEID": 1, "COMPANYID_FK": 88, "CompanyName": "Acme AS",
+        "OrgNum": "999888777", "IsCompany": True,
+    }]}).encode()
+    assert json.loads(strip_pii(body))["value"][0] == {"SALEID": 1}
+
+
 def test_customer_fields_cover_the_odata_denylist():
     from front_systems_mcp.odata import PII_FIELDS
     assert PII_FIELDS <= CUSTOMER_FIELDS
