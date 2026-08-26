@@ -17,7 +17,11 @@ Kjør:
 from __future__ import annotations
 
 import json
+import sys
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 from .odata import PII_FIELDS
@@ -99,3 +103,81 @@ def strip_pii(body: bytes) -> bytes:
             for field_name in CUSTOMER_FIELDS:
                 row.pop(field_name, None)
     return json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+
+@dataclass(frozen=True)
+class UpstreamResponse:
+    """Svaret fra Front Systems, redusert til det proxyen sender videre."""
+    status: int
+    body: bytes
+    content_type: str = "application/json"
+
+
+Forwarder = Callable[[str, str], UpstreamResponse]
+
+
+class _Handler(BaseHTTPRequestHandler):
+    server_version = "FrontSystemsReadProxy/1.0"
+
+    # Alle metoder går gjennom samme port; classify() avgjør skjebnen, så
+    # en ny HTTP-metode kan ikke smette forbi ved at do_X mangler.
+    def do_GET(self): self._handle("GET")
+    def do_POST(self): self._handle("POST")
+    def do_PUT(self): self._handle("PUT")
+    def do_PATCH(self): self._handle("PATCH")
+    def do_DELETE(self): self._handle("DELETE")
+    def do_HEAD(self): self._handle("HEAD")
+    def do_OPTIONS(self): self._handle("OPTIONS")
+
+    def _handle(self, method: str) -> None:
+        started = time.monotonic()
+        decision = classify(method, self.path)
+        if decision.kind == "health":
+            label, status, body = "healthz", 200, b'{"ok": true}'
+        elif decision.kind == "reject":
+            label, status = "avvist", decision.status
+            body = json.dumps({"error": decision.reason},
+                              ensure_ascii=False).encode("utf-8")
+        else:
+            label = decision.entity
+            query = urlparse(self.path).query
+            upstream = self.server.forward(decision.entity, query)
+            status, body = upstream.status, upstream.body
+            if decision.entity in STRIP_ENTITIES and status == 200:
+                body = strip_pii(body)
+            self._send(status, body, upstream.content_type)
+            self._log(method, label, status, started, len(body))
+            return
+        self._send(status, body, "application/json")
+        self._log(method, label, status, started, len(body))
+
+    def _send(self, status: int, body: bytes, content_type: str) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _log(self, method: str, label: str, status: int,
+             started: float, size: int) -> None:
+        # Aldri query-innhold eller feltverdier: en $filter kan inneholde
+        # kunde-ID-er, og en logglinje overlever lenger enn et svar.
+        ms = (time.monotonic() - started) * 1000
+        print(f"{time.strftime('%H:%M:%S')} {method} {label} {status} "
+              f"{ms:.0f}ms {size}b", file=sys.stderr, flush=True)
+
+    def log_message(self, fmt, *args):
+        return  # stdlib-loggeren skriver hele forespørselslinjen, query inkludert
+
+
+class ReadProxy(ThreadingHTTPServer):
+    """HTTP-server bundet til loopback, med injisert videresender.
+
+    Adressen er hardkodet med vilje: se modul-docstringen.
+    """
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def __init__(self, port: int, forward: Forwarder) -> None:
+        super().__init__(("127.0.0.1", port), _Handler)
+        self.forward = forward

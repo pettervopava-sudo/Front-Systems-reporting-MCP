@@ -3,11 +3,21 @@
 Ingen av disse testene rører nettverket. Der en ekte HTTP-rundtur trengs,
 kjøres en fake oppstrøm på loopback i samme prosess.
 """
+import inspect
 import json
+import threading
 
+import httpx
 import pytest
 
-from front_systems_mcp.proxy import ALLOWED_ENTITIES, CUSTOMER_FIELDS, classify, strip_pii
+from front_systems_mcp.proxy import (
+    ALLOWED_ENTITIES,
+    CUSTOMER_FIELDS,
+    ReadProxy,
+    UpstreamResponse,
+    classify,
+    strip_pii,
+)
 
 
 def test_get_on_allowed_entity_is_forwarded():
@@ -106,3 +116,101 @@ def test_company_identifier_is_stripped_too():
 def test_customer_fields_cover_the_odata_denylist():
     from front_systems_mcp.odata import PII_FIELDS
     assert PII_FIELDS <= CUSTOMER_FIELDS
+
+
+@pytest.fixture
+def proxy_factory():
+    """Starter en ReadProxy på efemer port med en stub-videresender.
+
+    Returnerer (base_url, calls) der calls er en liste av (entity, query).
+    """
+    servers = []
+
+    def start(response=None):
+        calls = []
+
+        def forward(entity, query):
+            calls.append((entity, query))
+            return response or UpstreamResponse(200, b'{"value": []}')
+
+        srv = ReadProxy(0, forward)
+        servers.append(srv)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        return f"http://127.0.0.1:{srv.server_address[1]}", calls
+
+    yield start
+    for srv in servers:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_binds_only_to_loopback():
+    """Loopback binding is a security property, so assert the real socket."""
+    srv = ReadProxy(0, lambda entity, query: UpstreamResponse(200, b"{}"))
+    try:
+        assert srv.server_address[0] == "127.0.0.1"
+    finally:
+        srv.server_close()
+
+
+def test_read_proxy_has_no_host_parameter():
+    params = list(inspect.signature(ReadProxy.__init__).parameters)
+    assert "host" not in params and "address" not in params
+
+
+def test_healthz_answers_without_touching_upstream(proxy_factory):
+    base, calls = proxy_factory()
+    r = httpx.get(f"{base}/healthz")
+    assert r.status_code == 200
+    assert r.json() == {"ok": True}
+    assert calls == []
+
+
+def test_post_is_refused_and_never_reaches_upstream(proxy_factory):
+    base, calls = proxy_factory()
+    r = httpx.post(f"{base}/odata/Sales", json={"x": 1})
+    assert r.status_code == 405
+    assert calls == []
+
+
+def test_unknown_entity_never_reaches_upstream(proxy_factory):
+    base, calls = proxy_factory()
+    assert httpx.get(f"{base}/odata/Customers").status_code == 404
+    assert calls == []
+
+
+def test_query_is_passed_verbatim(proxy_factory):
+    base, calls = proxy_factory()
+    query = "$select=SALEID,Qty&$top=2000000&from='2026-08-01'&to='2026-08-24'"
+    httpx.get(f"{base}/odata/Saleslines?{query}")
+    assert calls == [("Saleslines", query)]
+
+
+def test_saleslines_response_is_stripped(proxy_factory):
+    payload = json.dumps({"value": [{"SALEID": 1, "Email": "a@b.no"}]}).encode()
+    base, _ = proxy_factory(UpstreamResponse(200, payload))
+    row = httpx.get(f"{base}/odata/Saleslines").json()["value"][0]
+    assert row == {"SALEID": 1}
+
+
+def test_other_entities_pass_through_byte_identical(proxy_factory):
+    payload = json.dumps({"value": [{"SALEID": 1, "Email": "a@b.no"}]}).encode()
+    base, _ = proxy_factory(UpstreamResponse(200, payload))
+    assert httpx.get(f"{base}/odata/Sales").content == payload
+
+
+def test_upstream_error_status_and_body_pass_through(proxy_factory):
+    base, _ = proxy_factory(UpstreamResponse(500, b'{"odata.error": "boom"}'))
+    r = httpx.get(f"{base}/odata/Saleslines")
+    assert r.status_code == 500
+    assert r.content == b'{"odata.error": "boom"}'
+
+
+def test_stdlib_request_logging_stays_suppressed():
+    """Standardloggeren skriver hele forespørselslinjen -- query inkludert.
+
+    En $filter kan bære kunde-ID-er, og en logglinje overlever lenger enn
+    et svar, så overstyringen maa ikke forsvinne i en senere opprydding.
+    """
+    from front_systems_mcp.proxy import _Handler
+    assert _Handler.log_message(object(), "%s", "GET /odata/Sales?$filter=x") is None
