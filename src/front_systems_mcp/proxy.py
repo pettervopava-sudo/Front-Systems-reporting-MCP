@@ -17,12 +17,16 @@ Kjør:
 from __future__ import annotations
 
 import json
+import ssl
 import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
+
+import httpx
+import truststore
 
 from .odata import PII_FIELDS
 
@@ -181,3 +185,45 @@ class ReadProxy(ThreadingHTTPServer):
     def __init__(self, port: int, forward: Forwarder) -> None:
         super().__init__(("127.0.0.1", port), _Handler)
         self.forward = forward
+
+
+class UpstreamClient:
+    """Videresender til Front Systems med de ekte nøklene.
+
+    Synkron med vilje: serveren er trådbasert, og en async-klient ville
+    krevd en hendelsesløkke per tråd uten å gi noe tilbake.
+    """
+
+    def __init__(self, base_url: str, subscription_key: str, api_key: str,
+                 timeout: float = 600.0) -> None:
+        # Maskinens TLS-proxy gjør at Pythons innebygde CA-lager feiler på en
+        # gyldig kjede; truststore bruker systemets. Aldri verify=False —
+        # det ville eksponert nøklene for den som avlytter.
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self._base = base_url.rstrip("/")
+        self._http = httpx.Client(
+            timeout=timeout, verify=ctx,
+            headers={
+                "Ocp-Apim-Subscription-Key": subscription_key,
+                "x-api-key": api_key,
+                "Accept": "application/json",
+            })
+
+    def __call__(self, entity: str, query: str) -> UpstreamResponse:
+        # Spørringen settes på som rå streng: httpx' parameter-koding ville
+        # kunnet omskrive $filter-sitater og datoformatene from/to bruker.
+        url = f"{self._base}/odata/{entity}" + (f"?{query}" if query else "")
+        try:
+            response = self._http.get(url)
+        except httpx.TimeoutException:
+            return UpstreamResponse(
+                504, b'{"error": "Front Systems svarte ikke i tide."}')
+        except httpx.TransportError:
+            return UpstreamResponse(
+                502, b'{"error": "Naar ikke Front Systems."}')
+        return UpstreamResponse(
+            response.status_code, response.content,
+            response.headers.get("Content-Type", "application/json"))
+
+    def close(self) -> None:
+        self._http.close()

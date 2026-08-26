@@ -9,11 +9,13 @@ import threading
 
 import httpx
 import pytest
+import respx
 
 from front_systems_mcp.proxy import (
     ALLOWED_ENTITIES,
     CUSTOMER_FIELDS,
     ReadProxy,
+    UpstreamClient,
     UpstreamResponse,
     classify,
     strip_pii,
@@ -214,3 +216,58 @@ def test_stdlib_request_logging_stays_suppressed():
     """
     from front_systems_mcp.proxy import _Handler
     assert _Handler.log_message(object(), "%s", "GET /odata/Sales?$filter=x") is None
+
+
+UP = "https://up.test"
+
+
+def test_sends_both_api_keys():
+    with respx.mock:
+        route = respx.get(f"{UP}/odata/Sales").mock(
+            return_value=httpx.Response(200, json={"value": []}))
+        client = UpstreamClient(UP, "subkey", "apikey", timeout=5.0)
+        client("Sales", "")
+        client.close()
+    sent = route.calls.last.request
+    assert sent.headers["Ocp-Apim-Subscription-Key"] == "subkey"
+    assert sent.headers["x-api-key"] == "apikey"
+
+
+def test_query_reaches_upstream_verbatim():
+    query = "$select=SALEID&$top=2000000&from='2026-08-01'"
+    with respx.mock:
+        route = respx.get(url__startswith=f"{UP}/odata/Saleslines").mock(
+            return_value=httpx.Response(200, json={"value": []}))
+        client = UpstreamClient(UP, "s", "a", timeout=5.0)
+        client("Saleslines", query)
+        client.close()
+    assert route.calls.last.request.url.query.decode() == query
+
+
+def test_status_and_body_are_returned_unchanged():
+    with respx.mock:
+        respx.get(f"{UP}/odata/Sales").mock(
+            return_value=httpx.Response(503, content=b"upstream down"))
+        client = UpstreamClient(UP, "s", "a", timeout=5.0)
+        result = client("Sales", "")
+        client.close()
+    assert result.status == 503
+    assert result.body == b"upstream down"
+
+
+def test_timeout_maps_to_504():
+    with respx.mock:
+        respx.get(f"{UP}/odata/Sales").mock(side_effect=httpx.ReadTimeout("slow"))
+        client = UpstreamClient(UP, "s", "a", timeout=1.0)
+        result = client("Sales", "")
+        client.close()
+    assert result.status == 504
+
+
+def test_connection_failure_maps_to_502():
+    with respx.mock:
+        respx.get(f"{UP}/odata/Sales").mock(side_effect=httpx.ConnectError("no route"))
+        client = UpstreamClient(UP, "s", "a", timeout=1.0)
+        result = client("Sales", "")
+        client.close()
+    assert result.status == 502
