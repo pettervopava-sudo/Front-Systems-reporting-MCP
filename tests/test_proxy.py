@@ -6,6 +6,7 @@ kjøres en fake oppstrøm på loopback i samme prosess.
 import inspect
 import json
 import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import httpx
 import pytest
@@ -14,11 +15,14 @@ import respx
 from front_systems_mcp.proxy import (
     ALLOWED_ENTITIES,
     CUSTOMER_FIELDS,
+    DEFAULT_UPSTREAM,
     ReadProxy,
     UpstreamClient,
     UpstreamResponse,
+    check_not_self,
     classify,
     strip_pii,
+    upstream_url,
 )
 
 
@@ -271,3 +275,114 @@ def test_connection_failure_maps_to_502():
         result = client("Sales", "")
         client.close()
     assert result.status == 502
+
+
+def test_upstream_defaults_to_front_systems(monkeypatch, tmp_path):
+    monkeypatch.delenv("FRONT_SYSTEMS_UPSTREAM_URL", raising=False)
+    assert upstream_url(tmp_path / "missing.env") == DEFAULT_UPSTREAM
+
+
+def test_upstream_is_read_from_the_env_file(monkeypatch, tmp_path):
+    monkeypatch.delenv("FRONT_SYSTEMS_UPSTREAM_URL", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("FRONT_SYSTEMS_UPSTREAM_URL=https://from-file.test/\n")
+    assert upstream_url(env_file) == "https://from-file.test"
+
+
+def test_process_environment_wins_over_the_env_file(monkeypatch, tmp_path):
+    monkeypatch.setenv("FRONT_SYSTEMS_UPSTREAM_URL", "https://from-env.test/")
+    env_file = tmp_path / ".env"
+    env_file.write_text("FRONT_SYSTEMS_UPSTREAM_URL=https://from-file.test\n")
+    assert upstream_url(env_file) == "https://from-env.test"
+
+
+def test_pointing_upstream_at_the_proxy_itself_is_refused():
+    with pytest.raises(SystemExit):
+        check_not_self("http://127.0.0.1:8812", 8812)
+
+
+def test_pointing_upstream_elsewhere_is_fine():
+    check_not_self("https://frontsystemsapis.frontsystems.no", 8812)
+
+
+@pytest.fixture
+def fake_upstream():
+    """En ekte HTTP-server på loopback som spiller Front Systems."""
+    state = {"status": 200, "body": b'{"value": []}',
+             "content_type": "application/json", "calls": []}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            state["calls"].append(
+                {"path": self.path, "headers": dict(self.headers)})
+            body = state["body"]
+            self.send_response(state["status"])
+            self.send_header("Content-Type", state["content_type"])
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, fmt, *args):
+            return
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    state["url"] = f"http://127.0.0.1:{srv.server_address[1]}"
+    yield state
+    srv.shutdown()
+    srv.server_close()
+
+
+@pytest.fixture
+def live_proxy(fake_upstream):
+    """Ekte proxy + ekte UpstreamClient mot fake_upstream."""
+    client = UpstreamClient(fake_upstream["url"], "subkey", "apikey", timeout=5.0)
+    srv = ReadProxy(0, client)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{srv.server_address[1]}", fake_upstream
+    srv.shutdown()
+    srv.server_close()
+    client.close()
+
+
+def test_end_to_end_query_arrives_verbatim(live_proxy):
+    base, upstream = live_proxy
+    query = "$select=SALEID,Qty&$top=2000000&from='2026-08-01'&to='2026-08-24'"
+    httpx.get(f"{base}/odata/Saleslines?{query}")
+    assert upstream["calls"][-1]["path"] == f"/odata/Saleslines?{query}"
+
+
+def test_end_to_end_filter_with_spaces_arrives_unaltered(live_proxy):
+    """Real $filter clauses contain spaces; the client percent-encodes them
+    before we ever see the request, and they must reach upstream untouched."""
+    base, upstream = live_proxy
+    query = ("$filter=SaleDate%20ge%20datetime'2026-08-01T00:00:00'"
+             "&$top=2000000")
+    httpx.get(f"{base}/odata/Sales?{query}")
+    assert upstream["calls"][-1]["path"] == f"/odata/Sales?{query}"
+
+
+def test_end_to_end_client_credentials_are_never_forwarded(live_proxy):
+    base, upstream = live_proxy
+    httpx.get(f"{base}/odata/Sales",
+              headers={"x-api-key": "leaked", "Ocp-Apim-Subscription-Key": "leaked"})
+    sent = upstream["calls"][-1]["headers"]
+    assert sent["x-api-key"] == "apikey"
+    assert sent["Ocp-Apim-Subscription-Key"] == "subkey"
+
+
+def test_end_to_end_pii_is_stripped(live_proxy):
+    base, upstream = live_proxy
+    upstream["body"] = json.dumps({"value": [
+        {"SALEID": 1, "Qty": 2, "Email": "a@b.no", "FirstName": "Kari",
+         "Stock": "Høyer Bergen"},
+    ]}, ensure_ascii=False).encode("utf-8")
+    row = httpx.get(f"{base}/odata/Saleslines").json()["value"][0]
+    assert row == {"SALEID": 1, "Qty": 2, "Stock": "Høyer Bergen"}
+
+
+def test_end_to_end_write_never_reaches_upstream(live_proxy):
+    base, upstream = live_proxy
+    before = len(upstream["calls"])
+    assert httpx.post(f"{base}/odata/Sales", json={}).status_code == 405
+    assert len(upstream["calls"]) == before

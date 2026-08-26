@@ -16,18 +16,23 @@ Kjør:
 """
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import ssl
 import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
 import truststore
+from dotenv import dotenv_values
 
+from .config import load_config
 from .odata import PII_FIELDS
 
 DEFAULT_PORT = 8812
@@ -227,3 +232,56 @@ class UpstreamClient:
 
     def close(self) -> None:
         self._http.close()
+
+
+def upstream_url(env_file: Path | None = None) -> str:
+    """Front Systems-adressen proxyen selv snakker med.
+
+    Leses fra prosessmiljøet eller .env i repo-roten; BASE_URL peker på
+    proxyen og kan derfor ikke brukes her. env_file er kun for tester —
+    ellers ville de lest utviklerens egen .env.
+    """
+    if env_file is None:
+        env_file = Path(__file__).resolve().parents[2] / ".env"
+    values = (dotenv_values(env_file, encoding="utf-8-sig")
+              if env_file.exists() else {})
+    raw = (os.environ.get("FRONT_SYSTEMS_UPSTREAM_URL")
+           or values.get("FRONT_SYSTEMS_UPSTREAM_URL")
+           or DEFAULT_UPSTREAM)
+    return raw.strip().rstrip("/")
+
+
+def check_not_self(upstream: str, port: int) -> None:
+    """Stopp den vanligste feilkonfigurasjonen: proxyen som sin egen kilde."""
+    parsed = urlparse(upstream)
+    loopback = parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+    if loopback and (parsed.port or 80) == port:
+        raise SystemExit(
+            f"FRONT_SYSTEMS_UPSTREAM_URL peker paa proxyen selv ({upstream}). "
+            f"Sett den til Front Systems, f.eks. {DEFAULT_UPSTREAM}.")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Leseproxy foran Front Systems.")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT,
+                        help=f"lokal port (default {DEFAULT_PORT})")
+    args = parser.parse_args(argv)
+
+    upstream = upstream_url()
+    check_not_self(upstream, args.port)
+    config = load_config()
+    client = UpstreamClient(upstream, config.subscription_key, config.api_key)
+    server = ReadProxy(args.port, client)
+    print(f"leseproxy paa http://127.0.0.1:{args.port} -> {upstream}",
+          file=sys.stderr, flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+        client.close()
+
+
+if __name__ == "__main__":
+    main()
