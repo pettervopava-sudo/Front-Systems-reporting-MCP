@@ -29,7 +29,7 @@ klientverktøy peker på proxyen i stedet for på Front Systems.
 Claude Code / MCP-server / fs_query / rapportskript
         │  FRONT_SYSTEMS_BASE_URL = http://127.0.0.1:8812
         ▼
-   Leseproxy  (src/front_systems_proxy.py)
+   Leseproxy  (front_systems_mcp.proxy)
         │  ① kun GET   ② kun godkjente entiteter   ③ striper PII
         │  legger på de ekte nøklene fra .env
         ▼
@@ -42,7 +42,7 @@ omgå den krever en bevisst endring i `.env`.
 
 ## Komponenter
 
-### `src/front_systems_proxy.py`
+### `src/front_systems_mcp/proxy.py`
 
 Én modul, stdlib `ThreadingHTTPServer` + `httpx` (allerede en avhengighet).
 Ingen nye pakker.
