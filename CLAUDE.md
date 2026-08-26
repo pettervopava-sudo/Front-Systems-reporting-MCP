@@ -45,6 +45,15 @@ f-strenger. Alle tabellkolonner og grafkolonner skal kunne sorteres
 (SORT_JS/CHART_SORT_JS i line_reports). Beløp i 1000 kr merkes med
 dempet «k». Kundedata hentes ALDRI fra API-et.
 
+## Leseproxyen (standard vei mot API-et)
+
+Front Systems kan ikke gi lese-nøkler, så alle kall går gjennom en lokal
+proxy som kun slipper gjennom GET og fjerner kundefelter:
+`bash scripts/serve_proxy.sh` (port 8812), og `.env` peker
+`FRONT_SYSTEMS_BASE_URL` dit. Hver bruker kjører sin egen — ingen maskin
+er avhengig av noen annen. Design:
+`docs/superpowers/specs/2026-08-25-read-only-proxy-design.md`.
+
 ## Praktisk
 
 `.env` har nøklene (aldri i git; mal i `.env.example`). Cacher under
