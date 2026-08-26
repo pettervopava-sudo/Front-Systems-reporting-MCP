@@ -7,12 +7,23 @@ retail POS API.
 
 ```bash
 pip install -e ".[dev]"
-cp .env.example .env   # then fill in the three values
+cp .env.example .env          # then fill in the two keys
+bash scripts/serve_proxy.sh   # local read proxy on 127.0.0.1:8812
 python -m pytest
 ```
 
-`.env` needs `FRONT_SYSTEMS_BASE_URL`, `FRONT_SYSTEMS_SUBSCRIPTION_KEY` and
-`FRONT_SYSTEMS_API_KEY`. It is gitignored and must stay that way.
+`.env` needs `FRONT_SYSTEMS_SUBSCRIPTION_KEY` and `FRONT_SYSTEMS_API_KEY`. It is
+gitignored and must stay that way.
+
+Front Systems cannot issue read-only keys, so those two keys carry write access
+to the POS. The local read proxy is the guard rail: it holds the keys, accepts
+only `GET` against a small entity allowlist, and strips customer fields out of
+the responses. Every user runs their own on their own machine — it is not a
+shared service. `FRONT_SYSTEMS_BASE_URL` is what points the clients at it
+(`http://127.0.0.1:8812`); leave it pointing at Front Systems and every call
+goes around the guard rail, which is what the proxy warns about on startup.
+`FRONT_SYSTEMS_UPSTREAM_URL` is the real Front Systems address the proxy itself
+calls, and can be left unset.
 
 ## Register with Claude Code
 

@@ -87,8 +87,14 @@ CUSTOMER_FIELDS = frozenset(PII_FIELDS) | frozenset({
     "IsCompany", "OrgNum", "SaleBonusFactor",
 })
 
-#: Kun Saleslines bærer kundefelter; andre entiteter strømmes uparsede.
-STRIP_ENTITIES = frozenset({"Saleslines"})
+#: Kundefelter ligger ikke bare paa Saleslines: maalt mot ekte API 2026-08-26
+#: baerer ogsaa en Sales-rad CUSTOMERID_FK, PERSONID_FK og COMPANYID_FK.
+#: Begge strippes derfor. Stockstatus, Stockmovements og Products er maalt
+#: rene og slippes uparset gjennom -- Stockstatus returnerer ~460k rader, og
+#: en JSON-rundtur der ville kostet sekunder og gigabyte uten aa fjerne noe.
+#: REGEL: enhver ny entitet i ALLOWED_ENTITIES skal maales foer den tas inn,
+#: og foeres opp her hvis den baerer kundefelter.
+STRIP_ENTITIES = frozenset({"Saleslines", "Sales"})
 
 
 def strip_pii(body: bytes) -> bytes:
@@ -138,8 +144,20 @@ class _Handler(BaseHTTPRequestHandler):
     def do_HEAD(self): self._handle("HEAD")
     def do_OPTIONS(self): self._handle("OPTIONS")
 
+    def _host_is_loopback(self) -> bool:
+        """DNS-rebinding-vern: en nettside brukeren besoeker kan ellers la
+        nettleseren slaa opp et navn som peker hit og lese svarene."""
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]")
+        return host in {"127.0.0.1", "localhost", "::1", ""}
+
     def _handle(self, method: str) -> None:
         started = time.monotonic()
+        if not self._host_is_loopback():
+            body = json.dumps({"error": "Kun loopback-vert er tillatt."},
+                              ensure_ascii=False).encode("utf-8")
+            self._send(403, body, "application/json")
+            self._log(method, "avvist-host", 403, started, len(body))
+            return
         decision = classify(method, self.path)
         if decision.kind == "health":
             label, status, body = "healthz", 200, b'{"ok": true}'
@@ -150,7 +168,15 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             label = decision.entity
             query = urlparse(self.path).query
-            upstream = self.server.forward(decision.entity, query)
+            try:
+                upstream = self.server.forward(decision.entity, query)
+            except Exception as exc:
+                # Klienten skal aldri henge uten svar, og stacktracen skal
+                # ikke ut -- den kan inneholde query-strengen.
+                print(f"{time.strftime('%H:%M:%S')} forward-feil: "
+                      f"{type(exc).__name__}", file=sys.stderr, flush=True)
+                upstream = UpstreamResponse(
+                    502, b'{"error": "Proxyen klarte ikke aa videresende."}')
             status, body = upstream.status, upstream.body
             if decision.entity in STRIP_ENTITIES and status == 200:
                 body = strip_pii(body)
@@ -261,6 +287,24 @@ def check_not_self(upstream: str, port: int) -> None:
             f"Sett den til Front Systems, f.eks. {DEFAULT_UPSTREAM}.")
 
 
+def warn_if_clients_bypass(configured_base_url: str, port: int) -> None:
+    """Si tydelig fra naar klientene ikke peker paa denne proxyen.
+
+    Sperren er konfigurasjon: staar FRONT_SYSTEMS_BASE_URL fortsatt paa Front
+    Systems, gaar hvert kall utenom -- og en kjoerende proxy gir da inntrykk
+    av en beskyttelse man ikke har. Vi nekter ikke aa starte, for det er
+    legitimt aa kjoere proxyen mens man tester noe annet.
+    """
+    parsed = urlparse(configured_base_url)
+    points_here = (parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+                   and (parsed.port or 80) == port)
+    if not points_here:
+        print(f"ADVARSEL: FRONT_SYSTEMS_BASE_URL er {configured_base_url}, "
+              f"ikke denne proxyen. Verktoeyene gaar da utenom lesesperren. "
+              f"Sett FRONT_SYSTEMS_BASE_URL=http://127.0.0.1:{port} i .env.",
+              file=sys.stderr, flush=True)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Leseproxy foran Front Systems.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT,
@@ -270,6 +314,7 @@ def main(argv: list[str] | None = None) -> None:
     upstream = upstream_url()
     check_not_self(upstream, args.port)
     config = load_config()
+    warn_if_clients_bypass(config.base_url, args.port)
     client = UpstreamClient(upstream, config.subscription_key, config.api_key)
     server = ReadProxy(args.port, client)
     print(f"leseproxy paa http://127.0.0.1:{args.port} -> {upstream}",

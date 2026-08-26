@@ -7,16 +7,23 @@ vendor's published documentation does not cover most of this.
 
 | Item | Value |
 |---|---|
-| Base URL | `https://frontsystemsapis.frontsystems.no` |
+| Upstream URL | `https://frontsystemsapis.frontsystems.no` — what the local read proxy calls |
+| Client URL | `http://127.0.0.1:8812` — the local read proxy, what the tools call |
 | Auth | two headers, both required |
 | | `Ocp-Apim-Subscription-Key: <subscription key>` |
 | | `x-api-key: <integration key>` |
 | Protocol | OData **v3** — date literals are `datetime'2026-07-01T00:00:00'` |
 | Backend | `fsapiv3.azurewebsites.net`, model namespace `KTKApi.Models` |
 
-Credentials come from `.env` as `FRONT_SYSTEMS_SUBSCRIPTION_KEY`,
-`FRONT_SYSTEMS_API_KEY`, `FRONT_SYSTEMS_BASE_URL`. Never print their values, and
-never let request headers reach an error message or log.
+Nothing in the repo talks to the upstream URL directly. `FRONT_SYSTEMS_BASE_URL`
+points at the local read proxy (`bash scripts/serve_proxy.sh`, one per user),
+which holds the keys, allows only `GET` against an entity allowlist, and strips
+customer fields from `Sales` and `Saleslines` rows. The proxy reads the upstream
+address from `FRONT_SYSTEMS_UPSTREAM_URL`, defaulting to the one above.
+
+Credentials come from `.env` as `FRONT_SYSTEMS_SUBSCRIPTION_KEY` and
+`FRONT_SYSTEMS_API_KEY`. Never print their values, and never let request headers
+reach an error message or log.
 
 `api.frontsystems.no` is a **different, unrelated legacy API** (titled "KTKApi",
 66 REST endpoints for stock-counting and marketplace feeds) that rejects these

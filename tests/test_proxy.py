@@ -23,6 +23,7 @@ from front_systems_mcp.proxy import (
     classify,
     strip_pii,
     upstream_url,
+    warn_if_clients_bypass,
 )
 
 
@@ -199,10 +200,66 @@ def test_saleslines_response_is_stripped(proxy_factory):
     assert row == {"SALEID": 1}
 
 
-def test_other_entities_pass_through_byte_identical(proxy_factory):
-    payload = json.dumps({"value": [{"SALEID": 1, "Email": "a@b.no"}]}).encode()
+def test_customer_ids_are_stripped_from_sales_rows_too(proxy_factory):
+    """Maalt mot ekte API: en Sales-rad baerer CUSTOMERID_FK, PERSONID_FK og
+    COMPANYID_FK, saa entiteten kan ikke slippes gjennom ustrippet."""
+    payload = json.dumps({"value": [{
+        "SALEID": 1, "Total": 990.0, "IsVoided": False,
+        "CUSTOMERID_FK": 4711, "PERSONID_FK": 22, "COMPANYID_FK": 88,
+    }]}).encode()
     base, _ = proxy_factory(UpstreamResponse(200, payload))
-    assert httpx.get(f"{base}/odata/Sales").content == payload
+    row = httpx.get(f"{base}/odata/Sales").json()["value"][0]
+    assert row == {"SALEID": 1, "Total": 990.0, "IsVoided": False}
+
+
+def test_unstripped_entities_pass_through_byte_identical(proxy_factory):
+    """Stockstatus er maalt uten kundefelter og slippes gjennom uparset."""
+    payload = json.dumps({"value": [{"Stockid": 3229, "Qty": 4.0}]}).encode()
+    base, _ = proxy_factory(UpstreamResponse(200, payload))
+    assert httpx.get(f"{base}/odata/Stockstatus").content == payload
+
+
+def test_forwarder_exception_becomes_502(proxy_factory):
+    """En feil i videresenderen maa bli et svar, ikke en hengende klient."""
+    def boom(entity, query):
+        raise RuntimeError("boom")
+    srv = ReadProxy(0, boom)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        r = httpx.get(f"http://127.0.0.1:{srv.server_address[1]}/odata/Sales")
+        assert r.status_code == 502
+        assert "boom" not in r.text
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_foreign_host_header_is_refused(proxy_factory):
+    base, calls = proxy_factory()
+    r = httpx.get(f"{base}/odata/Sales", headers={"Host": "evil.example"})
+    assert r.status_code == 403
+    assert calls == []
+
+
+def test_loopback_host_header_is_accepted(proxy_factory):
+    base, _ = proxy_factory()
+    assert httpx.get(f"{base}/odata/Sales",
+                     headers={"Host": "localhost:1234"}).status_code == 200
+
+
+def test_warns_when_clients_point_elsewhere(capsys):
+    warn_if_clients_bypass("https://frontsystemsapis.frontsystems.no", 8812)
+    assert "ADVARSEL" in capsys.readouterr().err
+
+
+def test_silent_when_clients_point_at_this_proxy(capsys):
+    warn_if_clients_bypass("http://127.0.0.1:8812", 8812)
+    assert capsys.readouterr().err == ""
+
+
+def test_warns_when_the_port_does_not_match(capsys):
+    warn_if_clients_bypass("http://127.0.0.1:9999", 8812)
+    assert "ADVARSEL" in capsys.readouterr().err
 
 
 def test_upstream_error_status_and_body_pass_through(proxy_factory):
