@@ -6,6 +6,23 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${1:-8812}"
+AGENT="no.hoyer.frontsystems.readproxy"
+
+# Kjører proxyen allerede som launchd-tjeneste, skal vi ikke starte en til:
+# pkill under ville bare fått launchd til å restarte den, og de to instansene
+# ville slåss om porten. Vis heller hvordan tjenesten styres.
+if launchctl print "gui/$(id -u)/$AGENT" > /dev/null 2>&1; then
+  echo "leseproxyen kjører allerede som launchd-tjeneste (starter ved innlogging)." >&2
+  echo "  restart:  launchctl kickstart -k gui/$(id -u)/$AGENT" >&2
+  echo "  stopp:    launchctl bootout gui/$(id -u)/$AGENT" >&2
+  if curl -sf "http://127.0.0.1:$PORT/healthz" > /dev/null; then
+    echo "helsesjekk OK på http://127.0.0.1:$PORT"
+    exit 0
+  fi
+  echo "men den svarer ikke på port $PORT — se $ROOT/proxy.log" >&2
+  exit 1
+fi
+
 pkill -f "front_systems_mcp.proxy" 2>/dev/null || true
 sleep 0.5
 cd "$ROOT"

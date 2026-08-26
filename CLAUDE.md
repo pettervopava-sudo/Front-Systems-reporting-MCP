@@ -54,6 +54,11 @@ proxy som kun slipper gjennom GET og fjerner kundefelter:
 er avhengig av noen annen. Design:
 `docs/superpowers/specs/2026-08-25-read-only-proxy-design.md`.
 
+På Petters maskin kjører den som launchd-tjeneste
+(`~/Library/LaunchAgents/no.hoyer.frontsystems.readproxy.plist`) og starter
+ved innlogging; `serve_proxy.sh` oppdager det og lar den være. Restart:
+`launchctl kickstart -k gui/$(id -u)/no.hoyer.frontsystems.readproxy`.
+
 ## Praktisk
 
 `.env` har nøklene (aldri i git; mal i `.env.example`). Cacher under
