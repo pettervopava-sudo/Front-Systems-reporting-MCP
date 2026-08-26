@@ -27,3 +27,6 @@ proxy.log
 reports/
 # Synced copy of the suite served on port 8811 (scripts/serve_reports.sh)
 webrapport/
+
+# Midlertidige worktrees fra Claude Code (skillene i .claude/skills er sporet)
+.claude/worktrees/
