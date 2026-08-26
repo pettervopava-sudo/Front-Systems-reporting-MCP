@@ -154,6 +154,13 @@ def test_proxy_returns_the_same_rows_as_a_direct_call_and_no_pii():
         client.close()
 
     assert len(via_rows) == len(direct_rows) > 0
+    # Forutsetning: baseline-radene MAA baere kundefelter. Uten denne sjekken
+    # ville paastanden under passert selv om strippingen var fjernet, paa en
+    # dag der radene tilfeldigvis mangler kundefeltene.
+    unstripped = {key for row in direct_rows for key in row}
+    assert unstripped & CUSTOMER_FIELDS, (
+        "baseline carries no customer fields, so the stripping assertion "
+        "below would prove nothing")
     seen = {key for row in via_rows for key in row}
     assert not (seen & CUSTOMER_FIELDS)
 
