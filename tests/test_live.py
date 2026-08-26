@@ -122,3 +122,53 @@ async def test_saleslines_contains_no_voided_rows(client):
         f"{len(voided)} voided line(s) returned — reconciliation assumes none. "
         "lines_to_frame would need to filter them."
     )
+
+
+import json
+import threading
+
+import httpx as _httpx
+
+from front_systems_mcp.proxy import (
+    CUSTOMER_FIELDS, ReadProxy, UpstreamClient, upstream_url,
+)
+
+
+def test_proxy_returns_the_same_rows_as_a_direct_call_and_no_pii():
+    """Én dags Saleslines direkte og via proxyen: like mange rader, null PII."""
+    config = load_config()
+    client = UpstreamClient(upstream_url(), config.subscription_key,
+                            config.api_key, timeout=120.0)
+    server = ReadProxy(0, client)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    query = "from='2026-07-01'&to='2026-07-01'&$top=2000000"
+    try:
+        direct = client("Saleslines", query)
+        direct_rows = json.loads(direct.body)["value"]
+        via = _httpx.get(f"{base}/odata/Saleslines?{query}", timeout=120.0)
+        via_rows = via.json()["value"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        client.close()
+
+    assert len(via_rows) == len(direct_rows) > 0
+    seen = {key for row in via_rows for key in row}
+    assert not (seen & CUSTOMER_FIELDS)
+
+
+def test_proxy_refuses_a_write_against_the_real_api():
+    config = load_config()
+    client = UpstreamClient(upstream_url(), config.subscription_key,
+                            config.api_key, timeout=30.0)
+    server = ReadProxy(0, client)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    try:
+        response = _httpx.post(f"{base}/odata/Sales", json={}, timeout=30.0)
+    finally:
+        server.shutdown()
+        server.server_close()
+        client.close()
+    assert response.status_code == 405
