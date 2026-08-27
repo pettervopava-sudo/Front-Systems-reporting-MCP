@@ -19,7 +19,10 @@ Nothing in the repo talks to the upstream URL directly. `FRONT_SYSTEMS_BASE_URL`
 points at the local read proxy (`bash scripts/serve_proxy.sh`, one per user),
 which holds the keys, allows only `GET` against an entity allowlist, and strips
 customer fields from `Sales` and `Saleslines` rows. The proxy reads the upstream
-address from `FRONT_SYSTEMS_UPSTREAM_URL`, defaulting to the one above.
+address from `FRONT_SYSTEMS_UPSTREAM_URL`, defaulting to the one above. On macOS
+run `bash scripts/install_proxy_service.sh` once and it stays up as a login
+service, so the guard rail is standing before any report script runs; that
+script also generates the launchd plist for whichever machine it runs on.
 
 Credentials come from `.env` as `FRONT_SYSTEMS_SUBSCRIPTION_KEY` and
 `FRONT_SYSTEMS_API_KEY`. Never print their values, and never let request headers

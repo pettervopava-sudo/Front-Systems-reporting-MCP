@@ -7,16 +7,30 @@ retail POS API.
 
 ```bash
 pip install -e ".[dev]"
-cp .env.example .env          # then fill in the two keys
+cp .env.example .env          # then fill in the keys
 bash scripts/serve_proxy.sh   # local read proxy on 127.0.0.1:8812
 python -m pytest
 ```
 
-`.env` needs `FRONT_SYSTEMS_SUBSCRIPTION_KEY` and `FRONT_SYSTEMS_API_KEY`. It is
-gitignored and must stay that way.
+On macOS, install the proxy as a login service so the guard rail is up
+before anything can call the API:
 
-Front Systems cannot issue read-only keys, so those two keys carry write access
-to the POS. The local read proxy is the guard rail: it holds the keys, accepts
+```bash
+bash scripts/install_proxy_service.sh
+```
+
+Fill in `.env` first: the installer refuses to run without complete
+credentials, because the proxy reads them before it binds the port, and a
+service that cannot start would otherwise be left crash-looping at every
+login. Re-run the script after moving the repo, changing python, or editing
+the proxy; `--uninstall` removes it again.
+
+`.env` needs three values and startup fails if any is missing:
+`FRONT_SYSTEMS_BASE_URL` (the local proxy), `FRONT_SYSTEMS_SUBSCRIPTION_KEY`
+and `FRONT_SYSTEMS_API_KEY`. It is gitignored and must stay that way.
+
+Front Systems cannot issue read-only keys, so the subscription key and the API
+key carry write access to the POS. The local read proxy is the guard rail: it holds the keys, accepts
 only `GET` against a small entity allowlist, and strips customer fields out of
 the responses. Every user runs their own on their own machine — it is not a
 shared service. `FRONT_SYSTEMS_BASE_URL` is what points the clients at it

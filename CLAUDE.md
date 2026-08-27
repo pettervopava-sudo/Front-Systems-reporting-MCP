@@ -54,10 +54,12 @@ proxy som kun slipper gjennom GET og fjerner kundefelter:
 er avhengig av noen annen. Design:
 `docs/superpowers/specs/2026-08-25-read-only-proxy-design.md`.
 
-På Petters maskin kjører den som launchd-tjeneste
-(`~/Library/LaunchAgents/no.hoyer.frontsystems.readproxy.plist`) og starter
-ved innlogging; `serve_proxy.sh` oppdager det og lar den være. Restart:
-`launchctl kickstart -k gui/$(id -u)/no.hoyer.frontsystems.readproxy`.
+Som launchd-tjeneste (anbefalt, macOS): `bash
+scripts/install_proxy_service.sh` genererer plist-en med riktige stier for
+maskinen den kjøres på, så sperren står før noe rekker å kalle API-et.
+`serve_proxy.sh` oppdager tjenesten og lar den være. Restart etter endret
+proxy-kode: `launchctl kickstart -k gui/$(id -u)/no.hoyer.frontsystems.readproxy`.
+Fjernes med `install_proxy_service.sh --uninstall`.
 
 ## Praktisk
 
