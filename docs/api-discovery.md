@@ -1,6 +1,6 @@
 # API Discovery Notes
 
-**Last updated:** 2026-08-11
+**Last updated:** 2026-08-27
 **Status:** Connected and mapped. Key limitation found: line-level history is very short.
 
 > This file previously stated that the sales feed ended 2026-08-05 and that
@@ -11,7 +11,8 @@
 
 | Item | Value |
 |---|---|
-| Base URL | `https://frontsystemsapis.frontsystems.no` |
+| Client base URL | `http://127.0.0.1:8812` — the local read proxy (`FRONT_SYSTEMS_BASE_URL`) |
+| Upstream URL | `https://frontsystemsapis.frontsystems.no` — what the proxy itself calls (`FRONT_SYSTEMS_UPSTREAM_URL`) |
 | Auth | `Ocp-Apim-Subscription-Key` + `x-api-key` headers — confirmed working |
 | Protocol | OData **v3** (`datetime'...'` literals) |
 | Backend | `fsapiv3.azurewebsites.net` |

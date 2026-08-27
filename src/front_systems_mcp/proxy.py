@@ -4,7 +4,9 @@ Front Systems kan ikke utstede API-nøkler med kun lesetilgang, så nøklene i
 .env gir skrivetilgang til kassasystemet. Denne proxyen er sperren: den
 kjører på brukerens egen maskin, tar imot kun GET mot en liten allowlist av
 OData-entiteter, sender spørringen videre uendret, og fjerner kundefelter
-fra hver Saleslines-rad på vei tilbake. Klientene peker
+fra hver Sales- og Saleslines-rad på vei tilbake. Begge entitetene bærer
+kundefelter -- Sales blant annet kunde-ID-ene (CUSTOMERID_FK, PERSONID_FK,
+COMPANYID_FK) -- så begge må stripes; se STRIP_ENTITIES. Klientene peker
 FRONT_SYSTEMS_BASE_URL hit, og da finnes det ingen kodevei fra verktøyene i
 repoet til en skrivemetode.
 
